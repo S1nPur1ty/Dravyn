@@ -67,6 +67,8 @@ public:
 
     [[nodiscard]] u64 CalculateHash() const;
 
+    [[nodiscard]] bool MatchesShaderContext(GenericEnvironment& current) const;
+
     void Dump(u64 pipeline_hash, u64 shader_hash) override;
 
     void Serialize(std::ofstream& file) const;
@@ -76,6 +78,9 @@ public:
     }
 
 protected:
+    virtual bool IsCbufEnabled(u32 index) const = 0;
+    virtual bool IsTextureHandleValid(u32 handle) const = 0;
+
     std::optional<u64> TryFindSize();
 
     void InitializeNativeCode(u32 source_header_size = 128);
@@ -134,6 +139,9 @@ public:
     std::optional<Shader::ReplaceConstant> GetReplaceConstBuffer(u32 bank, u32 offset) override;
 
 private:
+    bool IsCbufEnabled(u32 index) const override;
+    bool IsTextureHandleValid(u32 handle) const override;
+
     Tegra::Engines::Maxwell3D* maxwell3d{};
     size_t stage_index{};
 };
@@ -163,6 +171,9 @@ public:
     }
 
 private:
+    bool IsCbufEnabled(u32 index) const override;
+    bool IsTextureHandleValid(u32 handle) const override;
+
     Tegra::Engines::KeplerCompute* kepler_compute{};
 };
 

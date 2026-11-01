@@ -500,6 +500,13 @@ void SDLDriver::InitJoystick(SDL_JoystickID joystick_id) {
     battery_state = SDL_GetJoystickPowerInfo(sdl_joystick, &battery_percent);
 
     const auto guid = GetGUID(sdl_joystick);
+    LOG_INFO(Input, "SDL controller '{}' GUID {}: {}",
+             SDL_GetJoystickName(sdl_joystick), guid.RawString(),
+             sdl_gamecontroller ? "gamepad mapping available" : "raw joystick only");
+    if (!sdl_gamecontroller) {
+        LOG_WARNING(Input, "No SDL gamepad mapping; map buttons and sticks manually "
+                           "or use a supported controller mode");
+    }
 
     if (Settings::values.enable_joycon_driver) {
         if (guid.uuid[5] == 0x05 && guid.uuid[4] == 0x7e &&
@@ -574,6 +581,8 @@ void SDLDriver::PumpEvents() const {
 }
 
 void SDLDriver::HandleGameControllerEvent(const SDL_Event& event) {
+    // Saved mappings use raw joystick indices, not SDL gamepad enum values.
+    // Gamepad button/axis events duplicate the raw events with different indices.
     switch (event.type) {
     case SDL_EVENT_JOYSTICK_BUTTON_UP: {
         if (const auto joystick = GetSDLJoystickBySDLID(event.jbutton.which)) {
@@ -589,15 +598,6 @@ void SDLDriver::HandleGameControllerEvent(const SDL_Event& event) {
         }
         break;
     }
-    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-    case SDL_EVENT_GAMEPAD_BUTTON_UP: {
-        const bool down = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
-        if (const auto joystick = GetSDLJoystickBySDLID(event.gbutton.which)) {
-            const PadIdentifier identifier = joystick->GetPadIdentifier();
-            SetButton(identifier, event.gbutton.button, down);
-        }
-        break;
-    }
     case SDL_EVENT_JOYSTICK_HAT_MOTION: {
         if (const auto joystick = GetSDLJoystickBySDLID(event.jhat.which)) {
             const PadIdentifier identifier = joystick->GetPadIdentifier();
@@ -609,13 +609,6 @@ void SDLDriver::HandleGameControllerEvent(const SDL_Event& event) {
         if (const auto joystick = GetSDLJoystickBySDLID(event.jaxis.which)) {
             const PadIdentifier identifier = joystick->GetPadIdentifier();
             SetAxis(identifier, event.jaxis.axis, event.jaxis.value / 32767.0f);
-        }
-        break;
-    }
-    case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
-        if (const auto joystick = GetSDLJoystickBySDLID(event.gaxis.which)) {
-            const PadIdentifier identifier = joystick->GetPadIdentifier();
-            SetAxis(identifier, event.gaxis.axis, event.gaxis.value / 32767.0f);
         }
         break;
     }

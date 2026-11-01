@@ -40,6 +40,7 @@
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_memory_allocator.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "video_core/textures/astc_empty_blocks.h"
 #include "video_core/textures/decoders.h"
 
 namespace Vulkan {
@@ -377,12 +378,22 @@ constexpr std::array<VkFormat, 2> OpaqueAstcViewFormats{VK_FORMAT_BC1_RGBA_UNORM
             image_ci.pNext = &image_format_list;
         }
     }
-    if (unbacked) {
+    // MoltenVK has no sparse residency. Its native ASTC arrays can fit in compressed form
+    // even when their texel count exceeds the allocator's uncompressed-image limit.
+    // Keep them within both the texture cache's 32-bit sizes and a fraction of the budget.
+    const u64 guest_bytes = u64{info.layer_stride} * info.resources.layers;
+    const bool dense_astc = device.GetDriverID() == VK_DRIVER_ID_MOLTENVK &&
+                            !device.IsSparseResidencyImage2DSupported() && info.native_tiling &&
+                            IsPixelFormatASTC(info.format) && device.IsOptimalAstcSupported() &&
+                            info.type == ImageType::e2D && guest_bytes != 0 &&
+                            guest_bytes <= std::numeric_limits<u32>::max() &&
+                            guest_bytes <= device.GetDeviceMemoryBudget() / 8;
+    if (unbacked && !dense_astc) {
         if (vk::Image image = allocator.CreateUnbackedImage(image_ci)) {
             return image;
         }
     }
-    return allocator.CreateImage(image_ci);
+    return allocator.CreateImage(image_ci, false, dense_astc);
 }
 
 [[nodiscard]] vk::ImageView MakeStorageView(const vk::Device& device, u32 level, VkImage image,
@@ -2303,6 +2314,22 @@ void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,
 }
 
 void Image::UploadMemory(const StagingBufferRef& map, std::span<const BufferImageCopy> copies) {
+    if (info.native_tiling && IsPixelFormatASTC(info.format) &&
+        runtime->device.GetDriverID() == VK_DRIVER_ID_MOLTENVK &&
+        runtime->device.IsOptimalAstcSupported() && False(flags & ImageFlagBits::Converted)) {
+        size_t normalized = 0;
+        for (const auto& copy : copies) {
+            normalized += Tegra::Texture::ASTC::NormalizeEmptyBlocks(
+                map.mapped_span.subspan(copy.buffer_offset, copy.buffer_size));
+        }
+        static u32 logged = 0;
+        if (normalized != 0 && logged < 16) {
+            ++logged;
+            LOG_INFO(Render_Vulkan,
+                     "Native ASTC upload at {:#x}: normalized {} empty blocks to transparent black",
+                     gpu_addr, normalized);
+        }
+    }
     UploadMemory(map.buffer, map.offset, copies);
 }
 

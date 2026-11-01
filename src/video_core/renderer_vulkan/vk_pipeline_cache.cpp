@@ -345,6 +345,27 @@ bool GraphicsPipelineCacheKey::operator==(const GraphicsPipelineCacheKey& rhs) c
     return std::memcmp(&rhs, this, Size()) == 0;
 }
 
+GraphicsPipelineCacheKey GraphicsPipelineCacheKey::ShaderKey() const noexcept {
+    auto result = *this;
+    // These fields only configure Vulkan fixed-function state. Keep every field used by
+    // MakeRuntimeInfo (including dual-source blending and attachment formats) distinct.
+    result.state.attachments = {};
+    result.state.dynamic_state = {};
+    result.state.depth_enabled.Assign(0);
+    result.state.depth_format.Assign(0);
+    result.state.vertex_strides = {};
+    result.state.binding_divisors = {};
+    if (!result.state.dynamic_vertex_input) {
+        result.state.enabled_divisors = 0;
+    }
+    for (auto& attribute : result.state.attributes) {
+        attribute.buffer.Assign(0);
+        attribute.offset.Assign(0);
+        attribute.size.Assign(0);
+    }
+    return result;
+}
+
 PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
                              const Device& device_, Scheduler& scheduler_,
                              DescriptorPool& descriptor_pool_,
@@ -869,7 +890,7 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
 std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
     ShaderPools& pools, const GraphicsPipelineCacheKey& key,
     std::span<Shader::Environment* const> envs, PipelineStatistics* statistics,
-    bool build_in_parallel) try {
+    bool build_in_parallel, std::shared_ptr<const GraphicsShaderStages>* compiled_stages) try {
     auto hash = key.Hash();
     LOG_DEBUG(Render_Vulkan, "{:#016x}", hash);
     size_t env_index{0};
@@ -920,8 +941,8 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
             layer_source_program = &programs[index];
         }
     }
-    std::array<const Shader::Info*, Maxwell::MaxShaderStage> infos{};
-    std::array<vk::ShaderModule, Maxwell::MaxShaderStage> modules;
+    auto stages = std::make_shared<GraphicsShaderStages>();
+    auto& modules = stages->modules;
 
     const Shader::IR::Program* previous_stage{};
     Shader::Backend::Bindings binding;
@@ -936,13 +957,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
         Shader::IR::Program& program{programs[index]};
         const size_t stage_index{index - 1};
-        infos[stage_index] = &program.info;
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage, device)};
         ConvertLegacyToGeneric(program, runtime_info);
         const std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
         modules[stage_index] = BuildShader(device, code);
+        stages->infos[stage_index] = program.info;
 
         // Text log + .spv dump. Text log is gated by gpu_log_level != Off; .spv dump
         // is independent and gated only by gpu_log_shader_dumps.
@@ -968,11 +989,14 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         }
         previous_stage = &program;
     }
+    if (compiled_stages) {
+        *compiled_stages = stages;
+    }
     Common::ThreadWorker* const thread_worker{build_in_parallel ? &workers : nullptr};
     return std::make_unique<GraphicsPipeline>(
         scheduler, buffer_cache, texture_cache, vulkan_pipeline_cache, &shader_notify, device,
         descriptor_pool, guest_descriptor_queue, descriptor_buffer_ring, thread_worker, statistics,
-        render_pass_cache, key, std::move(modules), infos);
+        render_pass_cache, key, std::move(stages));
 
 } catch (const Shader::Exception& exception) {
     auto hash = key.Hash();
@@ -1024,21 +1048,89 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
     SCOPE_EXIT {
         ReportRuntimePipeline("Graphics", begin);
     };
-    GraphicsEnvironments environments;
-    GetGraphicsEnvironments(environments, graphics_key.unique_hashes);
-
-    main_pools.ReleaseContents();
-    auto pipeline{
-        CreateGraphicsPipeline(main_pools, graphics_key, environments.Span(), nullptr, true)};
+    auto environments = std::make_shared<GraphicsEnvironments>();
+    GetGraphicsEnvironments(*environments, graphics_key.unique_hashes);
+    const auto shader_key = graphics_key.ShaderKey();
+    std::shared_ptr<const GraphicsShaderStages> stages;
+    std::shared_ptr<const GraphicsEnvironments> serialized_environments = environments;
+    // Preserve shader dumps/debugger captures by always going through the translator there.
+    const bool allow_reuse = device.IsMoltenVK() && !Settings::values.dump_guest_shaders &&
+                             !Settings::values.gpu_log_shader_dumps.GetValue() &&
+                             !device.HasDebuggingToolAttached();
+    if (allow_reuse) {
+        for (const auto& entry : runtime_shaders) {
+            if (entry.key != shader_key) {
+                continue;
+            }
+            bool matches = true;
+            for (size_t i = 0; i < Maxwell::MaxShaderProgram; ++i) {
+                if (graphics_key.unique_hashes[i] &&
+                    !entry.environments->envs[i].MatchesShaderContext(environments->envs[i])) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                stages = entry.stages;
+                serialized_environments = entry.environments;
+                break;
+            }
+        }
+    }
+    std::unique_ptr<GraphicsPipeline> pipeline;
+    if (stages) {
+        ++runtime_shader_hits;
+        pipeline = std::make_unique<GraphicsPipeline>(
+            scheduler, buffer_cache, texture_cache, vulkan_pipeline_cache, &shader_notify, device,
+            descriptor_pool, guest_descriptor_queue, descriptor_buffer_ring, &workers, nullptr,
+            render_pass_cache, graphics_key, stages);
+    } else {
+        ++runtime_shader_misses;
+        main_pools.ReleaseContents();
+        pipeline = CreateGraphicsPipeline(main_pools, graphics_key, environments->Span(), nullptr,
+                                          true, &stages);
+        size_t captured_code_size{};
+        bool reusable_context = true;
+        for (size_t i = 0; i < Maxwell::MaxShaderProgram; ++i) {
+            if (graphics_key.unique_hashes[i]) {
+                auto& env = environments->envs[i];
+                captured_code_size += env.CachedSizeBytes();
+                reusable_context &= env.CanBeSerialized() && !env.HasHLEMacroState();
+                // These translation-only lookups include pointers into the reusable IR pools.
+                env.cbuf_word_cache.clear();
+                env.cbuf_word_cache.rehash(0);
+                env.handle_cache.clear();
+                env.handle_cache.rehash(0);
+                env.track_cache.clear();
+                env.track_cache.rehash(0);
+            }
+        }
+        if (pipeline && allow_reuse && reusable_context && captured_code_size <= 1024 * 1024) {
+            constexpr size_t MAX_RUNTIME_SHADER_ENTRIES = 512;
+            constexpr size_t MAX_RUNTIME_SHADER_CODE_BYTES = 32 * 1024 * 1024;
+            while (!runtime_shaders.empty() &&
+                   (runtime_shaders.size() >= MAX_RUNTIME_SHADER_ENTRIES ||
+                    runtime_shader_code_bytes + captured_code_size > MAX_RUNTIME_SHADER_CODE_BYTES)) {
+                runtime_shader_code_bytes -= runtime_shaders.front().code_bytes;
+                runtime_shaders.pop_front();
+            }
+            runtime_shaders.push_back({shader_key, stages, environments, captured_code_size});
+            runtime_shader_code_bytes += captured_code_size;
+        }
+    }
+    if ((runtime_shader_hits + runtime_shader_misses) % 128 == 0) {
+        LOG_INFO(Render_Vulkan, "Runtime graphics shaders: {} reused, {} translated",
+                 runtime_shader_hits, runtime_shader_misses);
+    }
     if (!pipeline || pipeline_cache_filename.empty()) {
         return pipeline;
     }
-    serialization_thread.QueueWork([this, key = graphics_key, envs = std::move(environments.envs)] {
+    serialization_thread.QueueWork([this, key = graphics_key, envs = serialized_environments] {
         boost::container::static_vector<const GenericEnvironment*, Maxwell::MaxShaderProgram>
             env_ptrs;
         for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {
             if (key.unique_hashes[index] != 0) {
-                env_ptrs.push_back(&envs[index]);
+                env_ptrs.push_back(&envs->envs[index]);
             }
         }
         SerializePipeline(key, env_ptrs, pipeline_cache_filename, CACHE_VERSION);

@@ -546,7 +546,9 @@ void PresentManager::CopyToSwapchainImpl(Frame* frame) {
 
     const VkSemaphore present_semaphore = swapchain.CurrentPresentSemaphore();
     const VkSemaphore render_semaphore = swapchain.CurrentRenderSemaphore();
-    const std::array wait_semaphores = {present_semaphore, *frame->render_ready};
+    // MoltenVK acquisition has already waited on its host fence. Keep the render-ready
+    // dependency, but never pass a null acquire semaphore to vkQueueSubmit.
+    const std::array wait_semaphores = {*frame->render_ready, present_semaphore};
 
     static constexpr std::array<VkPipelineStageFlags, 2> wait_stage_masks{
         VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -556,7 +558,7 @@ void PresentManager::CopyToSwapchainImpl(Frame* frame) {
     const VkSubmitInfo submit_info{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = nullptr,
-        .waitSemaphoreCount = 2U,
+        .waitSemaphoreCount = present_semaphore ? 2U : 1U,
         .pWaitSemaphores = wait_semaphores.data(),
         .pWaitDstStageMask = wait_stage_masks.data(),
         .commandBufferCount = 1,

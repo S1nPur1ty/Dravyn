@@ -22,8 +22,12 @@ add_executable(tests
     video_core/memory_tracker.cpp
     video_core/gpu_queue_progress.cpp
     video_core/gpu_batching.cpp
+    video_core/shader_reuse.cpp
+    input_common/sdl_events.cpp
     video_core/descriptor_reuse.cpp
+    video_core/swapchain_acquire.cpp
     video_core/ampere_returns.cpp
+    video_core/astc_empty_blocks.cpp
     input_common/calibration_configuration_job.cpp
 )
 

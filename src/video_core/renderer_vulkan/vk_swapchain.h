@@ -91,7 +91,7 @@ public:
     }
 
     VkSemaphore CurrentPresentSemaphore() const {
-        return *present_semaphores[frame_index];
+        return acquire_fence ? VK_NULL_HANDLE : *present_semaphores[frame_index];
     }
 
     VkSemaphore CurrentRenderSemaphore() const {
@@ -131,6 +131,7 @@ private:
     std::vector<u64> resource_ticks;
     std::vector<vk::Semaphore> present_semaphores;
     std::vector<vk::Semaphore> render_semaphores;
+    vk::Fence acquire_fence;
 
     u32 width;
     u32 height;

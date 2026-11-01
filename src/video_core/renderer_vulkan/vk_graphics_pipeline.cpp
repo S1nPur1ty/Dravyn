@@ -257,18 +257,18 @@ GraphicsPipeline::GraphicsPipeline(
     GuestDescriptorQueue& guest_descriptor_queue_, DescriptorBufferRing& descriptor_buffer_ring_,
     Common::ThreadWorker* worker_thread,
     PipelineStatistics* pipeline_statistics, RenderPassCache& render_pass_cache,
-    const GraphicsPipelineCacheKey& key_, std::array<vk::ShaderModule, NUM_STAGES> stages,
-    const std::array<const Shader::Info*, NUM_STAGES>& infos)
+    const GraphicsPipelineCacheKey& key_, std::shared_ptr<const GraphicsShaderStages> stages)
     : key{key_}, device{device_}, texture_cache{texture_cache_}, buffer_cache{buffer_cache_},
       pipeline_cache(pipeline_cache_), scheduler{scheduler_},
       guest_descriptor_queue{guest_descriptor_queue_},
-      descriptor_buffer_ring{descriptor_buffer_ring_}, spv_modules{std::move(stages)} {
+      descriptor_buffer_ring{descriptor_buffer_ring_}, shader_stages{std::move(stages)},
+      spv_modules{shader_stages->modules} {
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
     }
     for (size_t stage = 0; stage < NUM_STAGES; ++stage) {
-        const Shader::Info* const info{infos[stage]};
-        if (!info) {
+        const Shader::Info* const info{&shader_stages->infos[stage]};
+        if (!spv_modules[stage]) {
             continue;
         }
         stage_infos[stage] = *info;

@@ -217,6 +217,40 @@ bool GenericEnvironment::CanBeSerialized() const noexcept {
     return !has_unbound_instructions;
 }
 
+bool GenericEnvironment::MatchesShaderContext(GenericEnvironment& current) const {
+    // HLE replacements may change even for previously unreplaced constants. Do not reuse
+    // those translations, or shaders whose instruction reads escaped the hashed range.
+    if (has_unbound_instructions || current.has_unbound_instructions ||
+        has_hle_engine_state || current.has_hle_engine_state ||
+        stage != current.stage || start_address != current.start_address ||
+        is_proprietary_driver != current.is_proprietary_driver ||
+        std::memcmp(&sph, &current.sph, sizeof(sph)) != 0 ||
+        gp_passthrough_mask != current.gp_passthrough_mask ||
+        local_memory_size != current.local_memory_size || texture_bound != current.texture_bound ||
+        shared_memory_size != current.shared_memory_size || workgroup_size != current.workgroup_size ||
+        viewport_transform_state != current.ReadViewportTransformState()) {
+        return false;
+    }
+    for (const auto& [key, value] : cbuf_values) {
+        const auto index = static_cast<u32>(key >> 32);
+        if (!current.IsCbufEnabled(index) ||
+            current.ReadCbufValue(index, static_cast<u32>(key)) != value) {
+            return false;
+        }
+    }
+    for (const auto& [handle, type] : texture_types) {
+        if (!current.IsTextureHandleValid(handle) || current.ReadTextureType(handle) != type) {
+            return false;
+        }
+    }
+    for (const auto& [handle, format] : texture_pixel_formats) {
+        if (!current.IsTextureHandleValid(handle) || current.ReadTexturePixelFormat(handle) != format) {
+            return false;
+        }
+    }
+    return true;
+}
+
 u64 GenericEnvironment::CalculateHash() const {
     const size_t size{ReadSizeBytes()};
     const auto data{std::make_unique<char[]>(size)};
@@ -524,6 +558,17 @@ GraphicsEnvironment::GraphicsEnvironment(Tegra::Engines::Maxwell3D& maxwell3d_,
         maxwell3d->engine_state == Tegra::Engines::Maxwell3D::EngineHint::OnHLEMacro;
 }
 
+bool GraphicsEnvironment::IsTextureHandleValid(u32 handle) const {
+    const auto& regs = maxwell3d->regs;
+    const auto pair = Tegra::Texture::TexturePair(
+        handle, regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding);
+    return pair.first <= regs.tex_header.limit;
+}
+
+bool GraphicsEnvironment::IsCbufEnabled(u32 index) const {
+    return maxwell3d->state.shader_stages[stage_index].const_buffers[index].enabled;
+}
+
 u32 GraphicsEnvironment::ReadCbufValue(u32 cbuf_index, u32 cbuf_offset) {
     const auto& cbuf{maxwell3d->state.shader_stages[stage_index].const_buffers[cbuf_index]};
     ASSERT(cbuf.enabled);
@@ -610,6 +655,15 @@ ComputeEnvironment::ComputeEnvironment(Tegra::Engines::KeplerCompute& kepler_com
         InitializeNativeCode(0);
         start_address = sizeof(sph);
     }
+}
+
+bool ComputeEnvironment::IsTextureHandleValid(u32 handle) const {
+    const auto pair = Tegra::Texture::TexturePair(handle, kepler_compute->launch_description.linked_tsc != 0);
+    return pair.first <= kepler_compute->regs.tic.limit;
+}
+
+bool ComputeEnvironment::IsCbufEnabled(u32 index) const {
+    return ((kepler_compute->launch_description.const_buffer_enable_mask.Value() >> index) & 1) != 0;
 }
 
 u32 ComputeEnvironment::ReadCbufValue(u32 cbuf_index, u32 cbuf_offset) {

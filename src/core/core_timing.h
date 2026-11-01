@@ -46,6 +46,12 @@ enum class UnscheduleEventType {
     NoWait,
 };
 
+enum class LoopingEventMode {
+    CatchUp,
+    // Start the next interval after delivery; never replay missed display ticks in a burst.
+    SkipMissed,
+};
+
 /**
  * This is a system to schedule events into the emulated machine's future. Time is measured
  * in main CPU clock cycles.
@@ -107,7 +113,8 @@ public:
     void ScheduleLoopingEvent(std::chrono::nanoseconds start_time,
                               std::chrono::nanoseconds resched_time,
                               const std::shared_ptr<EventType>& event_type,
-                              bool absolute_time = false);
+                              bool absolute_time = false,
+                              LoopingEventMode mode = LoopingEventMode::CatchUp);
 
     void UnscheduleEvent(const std::shared_ptr<EventType>& event_type,
                          UnscheduleEventType type = UnscheduleEventType::Wait);

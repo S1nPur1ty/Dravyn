@@ -13,11 +13,13 @@
 #include <android/api-level.h>
 #endif
 
+#include "common/assert.h"
 #include "common/logging.h"
 #include "common/settings.h"
 #include "common/settings_enums.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 #include "video_core/renderer_vulkan/vk_swapchain.h"
+#include "video_core/renderer_vulkan/vk_swapchain_acquire.h"
 #include "video_core/vulkan_common/vk_enum_string_helper.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
@@ -149,7 +151,13 @@ void Swapchain::Create(
         return;
     }
 
-    Destroy();
+    if (swapchain) {
+        // Presentation submits directly to the queue, outside the scheduler's timeline.
+        // Retire those submissions before destroying images and binary semaphores on resize.
+        std::scoped_lock submit_lock{scheduler.submit_mutex};
+        vk::Check(device.GetLogical().WaitIdle());
+        Destroy();
+    }
 
     CreateSwapchain(capabilities);
     CreateSemaphores();
@@ -159,9 +167,9 @@ void Swapchain::Create(
 }
 
 bool Swapchain::AcquireNextImage(bool may_flush) {
-    const VkResult result = device.GetLogical().AcquireNextImageKHR(
-        *swapchain, (std::numeric_limits<u64>::max)(), *present_semaphores[frame_index],
-        VK_NULL_HANDLE, &image_index);
+    const VkResult result = AcquireSwapchainImage(device.GetLogical(), *swapchain,
+                                                 CurrentPresentSemaphore(), acquire_fence,
+                                                 image_index);
     switch (result) {
     case VK_SUCCESS:
         break;
@@ -170,13 +178,9 @@ bool Swapchain::AcquireNextImage(bool may_flush) {
         break;
     case VK_ERROR_OUT_OF_DATE_KHR:
         is_outdated = true;
-        break;
-    case VK_ERROR_SURFACE_LOST_KHR:
-        vk::Check(result);
-        break;
+        return true;
     default:
-        LOG_ERROR(Render_Vulkan, "vkAcquireNextImageKHR returned {}", string_VkResult(result));
-        break;
+        UNREACHABLE();
     }
 
     const auto wait_with_frame_pacing = [this, may_flush] {
@@ -211,7 +215,9 @@ bool Swapchain::AcquireNextImage(bool may_flush) {
 
     resource_ticks[image_index] = scheduler.CurrentTick();
 
-    return is_suboptimal || is_outdated;
+    // SUBOPTIMAL returned a valid image and signaled acquisition. Present it once;
+    // NeedsRecreation() will replace the swapchain on the following frame.
+    return false;
 }
 
 void Swapchain::Present(VkSemaphore render_semaphore) {
@@ -350,9 +356,20 @@ void Swapchain::CreateSwapchain(const VkSurfaceCapabilitiesKHR& capabilities) {
 }
 
 void Swapchain::CreateSemaphores() {
-    present_semaphores.resize(image_count);
-    std::ranges::generate(present_semaphores,
-                          [this] { return device.GetLogical().CreateSemaphore(); });
+    if (device.IsMoltenVK()) {
+        // Avoid MoltenVK's acquisition-only MTLEvent command buffers on macOS. A host
+        // fence gives the same image-availability guarantee without that semaphore path.
+        acquire_fence = device.GetLogical().CreateFence({
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+        });
+        LOG_INFO(Render_Vulkan, "MoltenVK swapchain acquisition uses a host fence");
+    } else {
+        present_semaphores.resize(image_count);
+        std::ranges::generate(present_semaphores,
+                              [this] { return device.GetLogical().CreateSemaphore(); });
+    }
     render_semaphores.resize(image_count);
     std::ranges::generate(render_semaphores,
                           [this] { return device.GetLogical().CreateSemaphore(); });
@@ -362,6 +379,7 @@ void Swapchain::Destroy() {
     frame_index = 0;
     present_semaphores.clear();
     render_semaphores.clear();
+    acquire_fence.reset();
     swapchain.reset();
 }
 

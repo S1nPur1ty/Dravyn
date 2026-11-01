@@ -13,6 +13,9 @@
 
 #include "core/core.h"
 #include "core/core_timing.h"
+#include "common/scope_exit.h"
+#include "common/settings.h"
+#include "core/hle/service/nx2_timing.h"
 
 namespace {
 // Numbers are chosen randomly to make sure the correct one is given.
@@ -33,6 +36,7 @@ std::optional<std::chrono::nanoseconds> HostCallbackTemplate(s64 time,
 
 struct ScopeInit final {
     ScopeInit() {
+        callbacks_ran_flags.reset();
         core_timing.SetMulticore(true);
         core_timing.Initialize([]() {});
     }
@@ -51,6 +55,133 @@ u64 TestTimerSpeed(Core::Timing::CoreTiming& core_timing) {
 }
 
 } // Anonymous namespace
+
+TEST_CASE("Switch 2 counter keeps its advertised rate across speed changes", "[normal-speed]") {
+    const bool was_switch2 = Settings::CurrentProgramIsSwitch2();
+    const auto frequency = Common::g_wall_clock.GetGuestCNTFRQ();
+    const auto clock = Settings::values.cpu_clock.GetValue();
+    const auto sync = Settings::values.sync_core_speed.GetValue();
+    const auto speed = Settings::values.speed_limit.GetValue();
+    const auto mode = Settings::values.current_speed_mode.GetValue();
+    SCOPE_EXIT {
+        Settings::SetCurrentProgramIsSwitch2(was_switch2);
+        Common::g_wall_clock.SetGuestCNTFRQ(frequency);
+        Settings::values.cpu_clock.SetValue(clock);
+        Settings::values.sync_core_speed.SetValue(sync);
+        Settings::values.speed_limit.SetValue(speed);
+        Settings::values.current_speed_mode.SetValue(mode);
+    };
+    Settings::SetCurrentProgramIsSwitch2(true);
+    Settings::values.current_speed_mode.SetValue(Settings::SpeedMode::Standard);
+    Core::Timing::CoreTiming timing;
+    timing.SetMulticore(false);
+    timing.cpu_ticks = Common::WallClock::CPUTickFreq;
+    for (const u64 hz : {19'200'000ULL, 31'250'000ULL}) {
+        Common::g_wall_clock.SetGuestCNTFRQ(hz);
+        for (const auto cpu_clock : {Settings::CpuClock::Normal, Settings::CpuClock::Boost,
+                                     Settings::CpuClock::Overclock}) {
+            Settings::values.cpu_clock.SetValue(cpu_clock);
+            for (const bool sync_speed : {false, true}) {
+                Settings::values.sync_core_speed.SetValue(sync_speed);
+                for (const u16 speed_percent : {0, 50, 100, 200}) {
+                    Settings::values.speed_limit.SetValue(speed_percent);
+                    REQUIRE(timing.GetClockTicks() == hz);
+                }
+            }
+        }
+    }
+    // The multicore/JIT callback must also use the unscaled wall counter.
+    timing.SetMulticore(true);
+    const auto before = Common::g_wall_clock.GetCNTPCT();
+    const auto ticks = timing.GetClockTicks();
+    const auto after = Common::g_wall_clock.GetCNTPCT();
+    REQUIRE(ticks >= before);
+    REQUIRE(ticks <= after);
+}
+
+TEST_CASE("Display ticks skip missed intervals while other timers retain catch-up", "[normal-speed]") {
+    using namespace std::chrono_literals;
+    for (const auto mode : {Core::Timing::LoopingEventMode::CatchUp,
+                            Core::Timing::LoopingEventMode::SkipMissed}) {
+        Core::Timing::CoreTiming timing;
+        timing.SetMulticore(false);
+        unsigned calls = 0;
+        auto event = Core::Timing::CreateEvent("late periodic event", [&](s64, auto) {
+            ++calls;
+            return std::nullopt;
+        });
+        timing.ScheduleLoopingEvent(10ms, 10ms, event, false, mode);
+        timing.cpu_ticks = Common::WallClock::CPUTickFreq / 4; // 250 ms stall
+        REQUIRE(timing.Advance() == 260'000'000);
+        REQUIRE(calls == (mode == Core::Timing::LoopingEventMode::SkipMissed ? 1 : 25));
+        const auto delivered = calls;
+        REQUIRE(timing.Advance() == 260'000'000);
+        REQUIRE(calls == delivered);
+        timing.UnscheduleEvent(event);
+        REQUIRE_FALSE(timing.Advance().has_value());
+    }
+}
+
+TEST_CASE("Display timer starts next interval after callback and respects cancellation",
+          "[normal-speed]") {
+    using namespace std::chrono_literals;
+    Core::Timing::CoreTiming timing;
+    timing.SetMulticore(false);
+    unsigned calls = 0;
+    std::shared_ptr<Core::Timing::EventType> event;
+    event = Core::Timing::CreateEvent("slow display callback", [&](s64, auto) {
+        ++calls;
+        timing.cpu_ticks += Common::WallClock::CPUTickFreq / 10;
+        if (calls == 2) {
+            timing.UnscheduleEvent(event, Core::Timing::UnscheduleEventType::NoWait);
+        }
+        return std::optional{20ms};
+    });
+    timing.ScheduleLoopingEvent(10ms, 10ms, event, false,
+                               Core::Timing::LoopingEventMode::SkipMissed);
+    timing.cpu_ticks = Common::WallClock::CPUTickFreq / 10;
+    REQUIRE(timing.Advance() == 220'000'000);
+    REQUIRE(calls == 1);
+    timing.cpu_ticks = Common::WallClock::CPUTickFreq / 2;
+    REQUIRE_FALSE(timing.Advance().has_value());
+    REQUIRE(calls == 2);
+}
+
+TEST_CASE("Mario Kart World pacing stays normal even with turbo or unlimited selected",
+          "[normal-speed]") {
+    using namespace Service::Nx2Timing;
+    for (const bool limited : {false, true}) {
+        for (const u16 speed : {0, 50, 100, 200, 9999}) {
+            REQUIRE(PresentInterval(MarioKartWorldProgramId, limited, speed) == NormalFrameInterval);
+        }
+    }
+    REQUIRE(PresentInterval(1, false, 100).count() == 0);
+    REQUIRE(PresentInterval(1, true, 0).count() == 0);
+    REQUIRE(PresentInterval(1, true, 100) == NormalFrameInterval);
+    REQUIRE(PresentInterval(1, true, 200).count() == 8'333'334);
+}
+
+TEST_CASE("Presentation never catches up after stalls or late wakes", "[normal-speed]") {
+    using namespace std::chrono_literals;
+    using namespace Service::Nx2Timing;
+    PresentPacer pacer;
+    auto last = PresentPacer::Clock::time_point{};
+    REQUIRE(pacer.Deadline(last, NormalFrameInterval) == last);
+    pacer.RecordPresent(last);
+    for (unsigned frame = 0; frame < 1000; ++frame) {
+        const auto work = frame % 17 == 0 ? 500ms : 1ms;
+        const auto now = last + work;
+        const auto deadline = pacer.Deadline(now, NormalFrameInterval);
+        REQUIRE(deadline >= now);
+        REQUIRE(deadline - last >= NormalFrameInterval);
+        if (work == 500ms) {
+            REQUIRE(deadline == now);
+        }
+        last = deadline + (frame % 3 == 0 ? 4ms : 0ms);
+        pacer.RecordPresent(last);
+        REQUIRE(pacer.Deadline(last, NormalFrameInterval) == last + NormalFrameInterval);
+    }
+}
 
 TEST_CASE("CoreTiming[BasicOrder]", "[core]") {
     ScopeInit guard;

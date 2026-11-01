@@ -80,7 +80,10 @@ namespace {
     if (AreExtensionsSupported(dld, properties, std::array{VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME}))
         extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
-    if (enable_validation && AreExtensionsSupported(dld, properties, std::array{VK_EXT_DEBUG_UTILS_EXTENSION_NAME}))
+    // MoltenVK command-buffer failures otherwise go only to stderr, which Finder launches
+    // do not preserve in the emulator log. This does not enable validation layers.
+    const bool driver_messages = window_type == Core::Frontend::WindowSystemType::Cocoa;
+    if ((enable_validation || driver_messages) && AreExtensionsSupported(dld, properties, std::array{VK_EXT_DEBUG_UTILS_EXTENSION_NAME}))
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     return extensions;
 }

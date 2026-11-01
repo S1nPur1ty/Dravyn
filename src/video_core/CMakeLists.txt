@@ -205,6 +205,7 @@ add_library(video_core STATIC
     renderer_vulkan/vk_state_tracker.h
     renderer_vulkan/vk_swapchain.cpp
     renderer_vulkan/vk_swapchain.h
+    renderer_vulkan/vk_swapchain_acquire.h
     renderer_vulkan/vk_texture_cache.cpp
     renderer_vulkan/vk_texture_cache.h
     renderer_vulkan/vk_texture_cache_base.cpp
@@ -267,6 +268,7 @@ add_library(video_core STATIC
     texture_cache/util.cpp
     texture_cache/util.h
     textures/astc.h
+    textures/astc_empty_blocks.h
     textures/astc.cpp
     textures/bcn.cpp
     textures/bcn.h

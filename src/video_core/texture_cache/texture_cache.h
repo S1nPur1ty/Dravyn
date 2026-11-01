@@ -1367,7 +1367,10 @@ bool TextureCache<P>::UploadsByLayer(const ImageBase& image) const noexcept {
         if (True(image.flags & ImageFlagBits::SparseLayers)) {
             return true;
         }
-        return True(image.flags & ImageFlagBits::AcceleratedUpload) &&
+        const bool native_astc = image.info.native_tiling &&
+                                 IsPixelFormatASTC(image.info.format) &&
+                                 False(image.flags & ImageFlagBits::Converted);
+        return (True(image.flags & ImageFlagBits::AcceleratedUpload) || native_astc) &&
                image.info.type == ImageType::e2D && image.info.resources.layers > 1 &&
                image.guest_size_bytes >= LayerUploadMinSize &&
                False(image.flags & (ImageFlagBits::Unbacked | ImageFlagBits::Sparse |

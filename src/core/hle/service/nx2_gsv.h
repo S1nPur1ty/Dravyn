@@ -61,6 +61,7 @@
 #include "core/hle/service/nvdrv/nvdrv.h"
 #include "core/hle/service/nvdrv/nvdrv_interface.h"
 #include "core/hle/service/nx2_stub_interface.h"
+#include "core/hle/service/nx2_timing.h"
 #include "core/hle/service/sm/sm.h"
 #include "core/hle/service/server_manager.h"
 #include "core/hle/service/service.h"
@@ -1026,6 +1027,10 @@ public:
     explicit INx2Vi2Session(Core::System& system_, std::shared_ptr<Nx2NativeObjects> objects_)
         : ServiceFramework{system_, "nx2:vi2"}, m_context{system_, "nx2:vi2"},
           m_objects{std::move(objects_)} {
+        if (system.GetApplicationProcessProgramID() == Nx2Timing::MarioKartWorldProgramId) {
+            LOG_INFO(Service, "nx2:vi2 Mario Kart World: normal-speed 60 Hz pacing; "
+                              "turbo, unlimited and experimental vsync rates are ignored");
+        }
         RegisterHandlersTipc({
             {1, &INx2Vi2Session::ReturnOne, "Unknown1"},
             {3, &INx2Vi2Session::ReturnOne, "GetDisplayCount (guessed)"},
@@ -1090,10 +1095,12 @@ private:
             WaitForFrame(~w[22], w[24]);
         }
         const auto waited = std::chrono::steady_clock::now();
-        Composite(w[5], ~w[22], w[24]);
-        const auto composited = std::chrono::steady_clock::now();
         PaceToVblank();
         const auto paced = std::chrono::steady_clock::now();
+        Composite(w[5], ~w[22], w[24]);
+        const auto composited = std::chrono::steady_clock::now();
+        // Include submission work: a slow composite must not leave pacing debt either.
+        m_present_pacer.RecordPresent(composited);
         // Where each frame's time goes on the present thread, averaged per 600 presents: the
         // game is blocked here while Eden's GPU thread catches up (fence) and composites.
         {
@@ -1103,8 +1110,8 @@ private:
                 return std::chrono::duration_cast<us>(d).count();
             };
             m_stats.fence_us += to_us(waited - entered);
-            m_stats.composite_us += to_us(composited - waited);
-            m_stats.pace_us += to_us(paced - composited);
+            m_stats.composite_us += to_us(composited - paced);
+            m_stats.pace_us += to_us(paced - waited);
             m_stats.max_fence_us = (std::max<long long>)(m_stats.max_fence_us, static_cast<long long>(to_us(waited - entered)));
             if (m_stats.last_present != std::chrono::steady_clock::time_point{}) {
                 const long long frame = to_us(entered - m_stats.last_present);
@@ -1147,21 +1154,17 @@ private:
     // The console flips one frame per 60 Hz vblank and keeps the rest queued, so a game can't
     // present faster than that. Every slot is reported free here: hold each present until the
     // next vblank instead (title 4 ran at up to 160 fps, its timing and audio with it).
-    std::chrono::steady_clock::time_point m_next_vblank{};
+    Nx2Timing::PresentPacer m_present_pacer;
 
     void PaceToVblank() {
-        if (!Settings::values.use_speed_limit.GetValue() || Settings::SpeedLimit() == 0) {
-            return;
+        const auto interval = Nx2Timing::PresentInterval(system.GetApplicationProcessProgramID(),
+            Settings::values.use_speed_limit.GetValue(), Settings::SpeedLimit());
+        auto now = std::chrono::steady_clock::now();
+        const auto deadline = m_present_pacer.Deadline(now, interval);
+        while (now < deadline) {
+            std::this_thread::sleep_until(deadline);
+            now = std::chrono::steady_clock::now();
         }
-        const auto interval = std::chrono::nanoseconds{100'000'000'000LL / 60 / Settings::SpeedLimit()};
-        const auto now = std::chrono::steady_clock::now();
-        if (now > m_next_vblank + interval) {
-            // Running slower than 60 fps: show at once and don't bank the lost time.
-            m_next_vblank = now;
-        } else if (now < m_next_vblank) {
-            std::this_thread::sleep_until(m_next_vblank);
-        }
-        m_next_vblank += interval;
     }
 
     void WaitForFrame(u32 fence_id, u32 fence_value) {
@@ -1424,12 +1427,17 @@ private:
                 });
             // EDEN_NX2_VSYNC_HZ=<rate> (experiment): the game starts frames on this event, so a
             // frame that misses a 60 Hz tick idles until the next one.
-            static const std::chrono::nanoseconds VblankInterval{[] {
+            const auto vblank_interval = [this] {
+                if (system.GetApplicationProcessProgramID() == Nx2Timing::MarioKartWorldProgramId) {
+                    return Nx2Timing::NormalFrameInterval;
+                }
                 const char* text = std::getenv("EDEN_NX2_VSYNC_HZ");
-                const long long hz = text ? (std::max)(std::strtoll(text, nullptr, 10), 1LL) : 60LL;
-                return 1'000'000'000LL / hz;
-            }()};
-            system.CoreTiming().ScheduleLoopingEvent(VblankInterval, VblankInterval, m_vsync_timer);
+                const long long hz = text ? std::clamp(std::strtoll(text, nullptr, 10), 1LL,
+                                                       1'000'000'000LL) : 60LL;
+                return std::chrono::nanoseconds{(1'000'000'000LL + hz - 1) / hz};
+            }();
+            system.CoreTiming().ScheduleLoopingEvent(vblank_interval, vblank_interval, m_vsync_timer,
+                false, Core::Timing::LoopingEventMode::SkipMissed);
         }
         IPC::ResponseBuilder rb{ctx, 2, 1, 0};
         rb.Push(ResultSuccess);

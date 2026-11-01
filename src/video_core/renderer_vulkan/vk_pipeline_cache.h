@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
+#include <deque>
 #include <memory>
 #include <type_traits>
 #include "common/container/unordered_map.h"
@@ -129,7 +130,7 @@ private:
     std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(
         ShaderPools& pools, const GraphicsPipelineCacheKey& key,
         std::span<Shader::Environment* const> envs, PipelineStatistics* statistics,
-        bool build_in_parallel);
+        bool build_in_parallel, std::shared_ptr<const GraphicsShaderStages>* compiled_stages = nullptr);
 
     std::unique_ptr<ComputePipeline> CreateComputePipeline(const ComputePipelineCacheKey& key,
                                                            const ShaderInfo* shader);
@@ -165,6 +166,18 @@ private:
 
     ::Common::unordered_map<ComputePipelineCacheKey, std::unique_ptr<ComputePipeline>> compute_cache;
     ::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;
+
+    struct RuntimeShaderEntry {
+        GraphicsPipelineCacheKey key;
+        std::shared_ptr<const GraphicsShaderStages> stages;
+        std::shared_ptr<const GraphicsEnvironments> environments;
+        size_t code_bytes;
+    };
+    // Accessed only on the emulation GPU thread; disk preload has its own compiler pools.
+    std::deque<RuntimeShaderEntry> runtime_shaders;
+    size_t runtime_shader_code_bytes{};
+    size_t runtime_shader_hits{};
+    size_t runtime_shader_misses{};
 
     ShaderPools main_pools;
 

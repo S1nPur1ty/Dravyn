@@ -136,9 +136,13 @@ try
                             VK_API_VERSION_1_1,
                             render_window.GetWindowInfo().type,
                             Settings::values.renderer_debug.GetValue()))
-    // Create debug messenger if debug is enabled
-    , debug_messenger(Settings::values.renderer_debug ? CreateDebugUtilsCallback(instance)
-                                                    : vk::DebugUtilsMessenger{})
+    // Keep driver errors from Finder launches in the log without enabling validation.
+    , debug_messenger(dld.vkCreateDebugUtilsMessengerEXT &&
+                              (Settings::values.renderer_debug ||
+                               render_window.GetWindowInfo().type ==
+                                   Core::Frontend::WindowSystemType::Cocoa)
+                          ? CreateDebugUtilsCallback(instance, Settings::values.renderer_debug.GetValue())
+                          : vk::DebugUtilsMessenger{})
     // Create surface
     , surface(CreateSurface(instance, render_window.GetWindowInfo()))
     , device(CreateDevice(instance, dld, *surface))

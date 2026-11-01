@@ -11,6 +11,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -37,6 +38,8 @@ struct GraphicsPipelineCacheKey {
     FixedPipelineState state;
 
     size_t Hash() const noexcept;
+
+    [[nodiscard]] GraphicsPipelineCacheKey ShaderKey() const noexcept;
 
     bool operator==(const GraphicsPipelineCacheKey& rhs) const noexcept;
 
@@ -72,6 +75,11 @@ class RescalingPushConstant;
 class RenderAreaPushConstant;
 class Scheduler;
 
+struct GraphicsShaderStages {
+    std::array<vk::ShaderModule, Maxwell::MaxShaderStage> modules;
+    std::array<Shader::Info, Maxwell::MaxShaderStage> infos;
+};
+
 class GraphicsPipeline {
     static constexpr size_t NUM_STAGES = Tegra::Engines::Maxwell3D::Regs::MaxShaderStage;
 
@@ -83,8 +91,7 @@ public:
         GuestDescriptorQueue& guest_descriptor_queue,
         DescriptorBufferRing& descriptor_buffer_ring, Common::ThreadWorker* worker_thread,
         PipelineStatistics* pipeline_statistics, RenderPassCache& render_pass_cache,
-        const GraphicsPipelineCacheKey& key, std::array<vk::ShaderModule, NUM_STAGES> stages,
-        const std::array<const Shader::Info*, NUM_STAGES>& infos);
+        const GraphicsPipelineCacheKey& key, std::shared_ptr<const GraphicsShaderStages> stages);
 
     bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }
     bool SupportsAlphaToCoverage() const noexcept {
@@ -160,7 +167,8 @@ private:
     std::vector<GraphicsPipelineCacheKey> transition_keys;
     std::vector<GraphicsPipeline*> transitions;
 
-    std::array<vk::ShaderModule, NUM_STAGES> spv_modules;
+    std::shared_ptr<const GraphicsShaderStages> shader_stages;
+    const std::array<vk::ShaderModule, NUM_STAGES>& spv_modules;
 
     std::array<Shader::Info, NUM_STAGES> stage_infos;
     std::array<u32, 5> enabled_uniform_buffer_masks{};

@@ -105,7 +105,9 @@ namespace Vulkan {
 
         /// `dedicated`: own device memory, returned to the driver on destruction (short-lived
         /// images would otherwise leave holes in the shared blocks).
-        vk::Image CreateImage(const VkImageCreateInfo &ci, bool dedicated = false) const;
+        /// `allow_large`: the caller checked the compressed size against the device budget.
+        vk::Image CreateImage(const VkImageCreateInfo &ci, bool dedicated = false,
+                              bool allow_large = false) const;
 
         /// A sparse resident image with nothing bound (reads return zero, writes are dropped), or
         /// a null image when the device can't make one.
