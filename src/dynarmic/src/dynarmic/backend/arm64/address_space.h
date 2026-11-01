@@ -108,6 +108,10 @@ protected:
         void* exclusive_read_memory_32;
         void* exclusive_read_memory_64;
         void* exclusive_read_memory_128;
+        void* direct_exclusive_read_memory_8;
+        void* direct_exclusive_read_memory_16;
+        void* direct_exclusive_read_memory_32;
+        void* direct_exclusive_read_memory_64;
         void* write_memory_8;
         void* write_memory_16;
         void* write_memory_32;
@@ -123,6 +127,10 @@ protected:
         void* exclusive_write_memory_32;
         void* exclusive_write_memory_64;
         void* exclusive_write_memory_128;
+        void* direct_exclusive_write_memory_8;
+        void* direct_exclusive_write_memory_16;
+        void* direct_exclusive_write_memory_32;
+        void* direct_exclusive_write_memory_64;
 
         void* call_svc;
         void* exception_raised;

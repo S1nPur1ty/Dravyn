@@ -8,6 +8,8 @@
 
 #include "dynarmic/backend/arm64/a64_address_space.h"
 
+#include <atomic>
+
 #include "dynarmic/backend/arm64/a64_jitstate.h"
 #include "dynarmic/backend/arm64/abi.h"
 #include "dynarmic/backend/arm64/devirtualize.h"
@@ -21,6 +23,43 @@
 #include "dynarmic/ir/opt_passes.h"
 
 namespace Dynarmic::Backend::Arm64 {
+
+template<typename T>
+static T ReadExclusiveDirect(const A64::UserConfig& conf, A64::VAddr vaddr, T* pointer) {
+    static_assert(std::atomic_ref<T>::is_always_lock_free);
+    static_assert(std::atomic_ref<T>::required_alignment <= sizeof(T));
+    return conf.global_monitor->ReadAndMark<T>(conf.processor_id, vaddr, [&] {
+        return std::atomic_ref<T>(*pointer).load(std::memory_order_relaxed);
+    });
+}
+
+template<typename T>
+static u32 WriteExclusiveDirect(const A64::UserConfig& conf, A64::VAddr vaddr, T value, T* pointer) {
+    static_assert(std::atomic_ref<T>::is_always_lock_free);
+    static_assert(std::atomic_ref<T>::required_alignment <= sizeof(T));
+    return conf.global_monitor->DoExclusiveOperation<T>(conf.processor_id, vaddr, [&](T expected) {
+        return std::atomic_ref<T>(*pointer).compare_exchange_strong(expected, value,
+                                                                    std::memory_order_seq_cst);
+    })
+             ? 0
+             : 1;
+}
+
+template<auto fn>
+static void* EmitDirectExclusiveTrampoline(oaknut::CodeGenerator& code, const A64::UserConfig& conf) {
+    using namespace oaknut::util;
+    oaknut::Label l_addr, l_this;
+    void* target = code.xptr<void*>();
+    code.LDR(X0, l_this);
+    code.LDR(Xscratch0, l_addr);
+    code.BR(Xscratch0);
+    code.align(8);
+    code.l(l_this);
+    code.dx(std::bit_cast<u64>(&conf));
+    code.l(l_addr);
+    code.dx(std::bit_cast<u64>(fn));
+    return target;
+}
 
 template<auto mfp, typename T>
 static void* EmitCallReadTrampoline(oaknut::CodeGenerator& code, T* this_, size_t bitsize) {
@@ -395,6 +434,14 @@ void A64AddressSpace::EmitPrelude() {
     prelude_info.exclusive_read_memory_32 = EmitExclusiveReadCallTrampoline<&A64::UserCallbacks::MemoryRead, u32>(code, conf);
     prelude_info.exclusive_read_memory_64 = EmitExclusiveReadCallTrampoline<&A64::UserCallbacks::MemoryRead, u64>(code, conf);
     prelude_info.exclusive_read_memory_128 = EmitExclusiveRead128CallTrampoline(code, conf);
+    prelude_info.direct_exclusive_read_memory_8 = EmitDirectExclusiveTrampoline<ReadExclusiveDirect<u8>>(code, conf);
+    prelude_info.direct_exclusive_read_memory_16 = EmitDirectExclusiveTrampoline<ReadExclusiveDirect<u16>>(code, conf);
+    prelude_info.direct_exclusive_read_memory_32 = EmitDirectExclusiveTrampoline<ReadExclusiveDirect<u32>>(code, conf);
+    prelude_info.direct_exclusive_read_memory_64 = EmitDirectExclusiveTrampoline<ReadExclusiveDirect<u64>>(code, conf);
+    prelude_info.direct_exclusive_write_memory_8 = EmitDirectExclusiveTrampoline<WriteExclusiveDirect<u8>>(code, conf);
+    prelude_info.direct_exclusive_write_memory_16 = EmitDirectExclusiveTrampoline<WriteExclusiveDirect<u16>>(code, conf);
+    prelude_info.direct_exclusive_write_memory_32 = EmitDirectExclusiveTrampoline<WriteExclusiveDirect<u32>>(code, conf);
+    prelude_info.direct_exclusive_write_memory_64 = EmitDirectExclusiveTrampoline<WriteExclusiveDirect<u64>>(code, conf);
     prelude_info.write_memory_8 = EmitCallWriteTrampoline<&A64::UserCallbacks::MemoryWrite>(code, conf.callbacks, sizeof(u8));
     prelude_info.write_memory_16 = EmitCallWriteTrampoline<&A64::UserCallbacks::MemoryWrite>(code, conf.callbacks, sizeof(u16));
     prelude_info.write_memory_32 = EmitCallWriteTrampoline<&A64::UserCallbacks::MemoryWrite>(code, conf.callbacks, sizeof(u32));
@@ -578,6 +625,7 @@ EmitConfig A64AddressSpace::GetEmitConfig() {
         .check_halt_on_memory_access = conf.check_halt_on_memory_access,
 
         .page_table_pointer = std::bit_cast<u64>(conf.page_table),
+        .page_table_exclusive_access = conf.page_table_exclusive_access && conf.global_monitor != nullptr && !conf.check_halt_on_memory_access,
         .page_table_address_space_bits = conf.page_table_address_space_bits,
         .page_table_pointer_mask = conf.page_table_pointer_mask,
         .page_table_log2_stride = conf.page_table_log2_stride,

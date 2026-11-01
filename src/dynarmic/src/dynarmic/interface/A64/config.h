@@ -156,6 +156,11 @@ struct UserConfig {
     /// If page_table is nullptr, all memory accesses hit the memory callbacks.
     void** page_table = nullptr;
 
+    /// ARM64: use aligned ordinary-RAM page table entries for 8-64-bit exclusive accesses.
+    /// The global monitor still tracks reservations. Marked/missing entries and 128-bit
+    /// accesses use callbacks. Leave disabled when callbacks must observe every access.
+    bool page_table_exclusive_access = false;
+
     /// This selects other optimizations than can't otherwise be disabled by setting other
     /// configuration options. This includes:
     /// - IR optimizations

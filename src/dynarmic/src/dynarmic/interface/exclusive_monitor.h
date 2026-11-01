@@ -90,7 +90,7 @@ private:
     boost::container::static_vector<VAddr, MAX_NUM_CPU_CORES> exclusive_addresses;
     boost::container::static_vector<Vector, MAX_NUM_CPU_CORES> exclusive_values;
 #if defined(__APPLE__) && defined(__aarch64__)
-    // ARM64 uses the monitor through callbacks, so it can use an OS-aware lock.
+    // ARM64 accesses the monitor through host calls, so it can use an OS-aware lock.
     alignas(128) os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
 #else
     SpinLock lock;

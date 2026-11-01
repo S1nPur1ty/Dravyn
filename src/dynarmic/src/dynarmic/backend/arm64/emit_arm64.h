@@ -61,6 +61,10 @@ enum class LinkTarget {
     ExclusiveReadMemory32,
     ExclusiveReadMemory64,
     ExclusiveReadMemory128,
+    DirectExclusiveReadMemory8,
+    DirectExclusiveReadMemory16,
+    DirectExclusiveReadMemory32,
+    DirectExclusiveReadMemory64,
     WriteMemory8,
     WriteMemory16,
     WriteMemory32,
@@ -76,6 +80,10 @@ enum class LinkTarget {
     ExclusiveWriteMemory32,
     ExclusiveWriteMemory64,
     ExclusiveWriteMemory128,
+    DirectExclusiveWriteMemory8,
+    DirectExclusiveWriteMemory16,
+    DirectExclusiveWriteMemory32,
+    DirectExclusiveWriteMemory64,
     CallSVC,
     ExceptionRaised,
     InstructionSynchronizationBarrierRaised,
@@ -127,6 +135,7 @@ struct EmitConfig {
 
     // Page table
     u64 page_table_pointer;
+    bool page_table_exclusive_access{};
     std::size_t page_table_address_space_bits;
     u64 page_table_pointer_mask;
     std::size_t page_table_log2_stride;

@@ -193,6 +193,18 @@ void AddressSpace::Link(EmittedBlockInfo& block_info) {
         case LinkTarget::ExclusiveReadMemory128:
             c.BL(prelude_info.exclusive_read_memory_128);
             break;
+        case LinkTarget::DirectExclusiveReadMemory8:
+            c.BL(prelude_info.direct_exclusive_read_memory_8);
+            break;
+        case LinkTarget::DirectExclusiveReadMemory16:
+            c.BL(prelude_info.direct_exclusive_read_memory_16);
+            break;
+        case LinkTarget::DirectExclusiveReadMemory32:
+            c.BL(prelude_info.direct_exclusive_read_memory_32);
+            break;
+        case LinkTarget::DirectExclusiveReadMemory64:
+            c.BL(prelude_info.direct_exclusive_read_memory_64);
+            break;
         // { this, vaddr, value, size }
         case LinkTarget::WriteMemory8:
             c.BL(prelude_info.write_memory_8);
@@ -240,6 +252,18 @@ void AddressSpace::Link(EmittedBlockInfo& block_info) {
             break;
         case LinkTarget::ExclusiveWriteMemory128:
             c.BL(prelude_info.exclusive_write_memory_128);
+            break;
+        case LinkTarget::DirectExclusiveWriteMemory8:
+            c.BL(prelude_info.direct_exclusive_write_memory_8);
+            break;
+        case LinkTarget::DirectExclusiveWriteMemory16:
+            c.BL(prelude_info.direct_exclusive_write_memory_16);
+            break;
+        case LinkTarget::DirectExclusiveWriteMemory32:
+            c.BL(prelude_info.direct_exclusive_write_memory_32);
+            break;
+        case LinkTarget::DirectExclusiveWriteMemory64:
+            c.BL(prelude_info.direct_exclusive_write_memory_64);
             break;
         case LinkTarget::CallSVC:
             c.BL(prelude_info.call_svc);

@@ -99,32 +99,32 @@ LinkTarget WrappedWriteMemoryLinkTarget(std::size_t bitsize) {
     UNREACHABLE();
 }
 
-LinkTarget ExclusiveReadMemoryLinkTarget(std::size_t bitsize) {
+LinkTarget ExclusiveReadMemoryLinkTarget(std::size_t bitsize, bool direct = false) {
     switch (bitsize) {
     case 8:
-        return LinkTarget::ExclusiveReadMemory8;
+        return direct ? LinkTarget::DirectExclusiveReadMemory8 : LinkTarget::ExclusiveReadMemory8;
     case 16:
-        return LinkTarget::ExclusiveReadMemory16;
+        return direct ? LinkTarget::DirectExclusiveReadMemory16 : LinkTarget::ExclusiveReadMemory16;
     case 32:
-        return LinkTarget::ExclusiveReadMemory32;
+        return direct ? LinkTarget::DirectExclusiveReadMemory32 : LinkTarget::ExclusiveReadMemory32;
     case 64:
-        return LinkTarget::ExclusiveReadMemory64;
+        return direct ? LinkTarget::DirectExclusiveReadMemory64 : LinkTarget::ExclusiveReadMemory64;
     case 128:
         return LinkTarget::ExclusiveReadMemory128;
     }
     UNREACHABLE();
 }
 
-LinkTarget ExclusiveWriteMemoryLinkTarget(std::size_t bitsize) {
+LinkTarget ExclusiveWriteMemoryLinkTarget(std::size_t bitsize, bool direct = false) {
     switch (bitsize) {
     case 8:
-        return LinkTarget::ExclusiveWriteMemory8;
+        return direct ? LinkTarget::DirectExclusiveWriteMemory8 : LinkTarget::ExclusiveWriteMemory8;
     case 16:
-        return LinkTarget::ExclusiveWriteMemory16;
+        return direct ? LinkTarget::DirectExclusiveWriteMemory16 : LinkTarget::ExclusiveWriteMemory16;
     case 32:
-        return LinkTarget::ExclusiveWriteMemory32;
+        return direct ? LinkTarget::DirectExclusiveWriteMemory32 : LinkTarget::ExclusiveWriteMemory32;
     case 64:
-        return LinkTarget::ExclusiveWriteMemory64;
+        return direct ? LinkTarget::DirectExclusiveWriteMemory64 : LinkTarget::ExclusiveWriteMemory64;
     case 128:
         return LinkTarget::ExclusiveWriteMemory128;
     }
@@ -294,6 +294,56 @@ std::pair<oaknut::XReg, oaknut::XReg> InlinePageTableEmitVAddrLookup(oaknut::Cod
     }
     code.AND(Xscratch1, Xaddr, page_table_const_mask);
     return std::make_pair(Xscratch0, Xscratch1);
+}
+
+template<std::size_t bitsize, bool write>
+void PageTableEmitExclusiveMemory(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
+    static_assert(bitsize <= 64);
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    if constexpr (write) {
+        ctx.reg_alloc.PrepareForCall({}, args[1], args[2]);
+    } else {
+        ctx.reg_alloc.PrepareForCall({}, args[1]);
+    }
+    const bool ordered = IsOrdered(args[write ? 3 : 2].GetImmediateAccType());
+    const auto fallback = GenSharedLabel();
+    oaknut::Label after_call, end;
+
+    if constexpr (write) {
+        if (ordered) {
+            code.DMB(oaknut::BarrierOp::ISH);
+        }
+        code.MOV(W0, 1);
+        code.LDRB(Wscratch0, Xstate, ctx.conf.state_exclusive_state_offset);
+        code.CBZ(Wscratch0, end);
+        code.STRB(WZR, Xstate, ctx.conf.state_exclusive_state_offset);
+    } else {
+        code.MOV(Wscratch0, 1);
+        code.STRB(Wscratch0, Xstate, ctx.conf.state_exclusive_state_offset);
+    }
+
+    // Native atomics require natural alignment, even within a mapped guest page.
+    if constexpr (bitsize > 8) {
+        code.TST(X1, bitsize / 8 - 1);
+        code.B(NE, *fallback);
+    }
+    const auto [base, offset] = InlinePageTableEmitVAddrLookup<bitsize>(code, ctx, X1, fallback);
+    const auto pointer = write ? X3 : X2;
+    code.ADD(pointer, base, offset);
+    if constexpr (bitsize > 8) {
+        code.TST(pointer, bitsize / 8 - 1);
+        code.B(NE, *fallback);
+    }
+    EmitRelocation(code, ctx, write ? ExclusiveWriteMemoryLinkTarget(bitsize, true) : ExclusiveReadMemoryLinkTarget(bitsize, true));
+    code.B(after_call);
+    code.l(*fallback);
+    EmitRelocation(code, ctx, write ? ExclusiveWriteMemoryLinkTarget(bitsize) : ExclusiveReadMemoryLinkTarget(bitsize));
+    code.l(after_call);
+    if (ordered) {
+        code.DMB(oaknut::BarrierOp::ISH);
+    }
+    code.l(end);
+    ctx.reg_alloc.DefineAsRegister(inst, X0);
 }
 
 template<std::size_t bitsize>
@@ -655,6 +705,12 @@ void EmitReadMemory(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* ins
 
 template<std::size_t bitsize>
 void EmitExclusiveReadMemory(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
+    if constexpr (bitsize <= 64) {
+        if (ctx.conf.page_table_pointer != 0 && ctx.conf.page_table_exclusive_access) {
+            PageTableEmitExclusiveMemory<bitsize, false>(code, ctx, inst);
+            return;
+        }
+    }
     CallbackOnlyEmitExclusiveReadMemory<bitsize>(code, ctx, inst);
 }
 
@@ -671,6 +727,12 @@ void EmitWriteMemory(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* in
 
 template<std::size_t bitsize>
 void EmitExclusiveWriteMemory(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
+    if constexpr (bitsize <= 64) {
+        if (ctx.conf.page_table_pointer != 0 && ctx.conf.page_table_exclusive_access) {
+            PageTableEmitExclusiveMemory<bitsize, true>(code, ctx, inst);
+            return;
+        }
+    }
     CallbackOnlyEmitExclusiveWriteMemory<bitsize>(code, ctx, inst);
 }
 
