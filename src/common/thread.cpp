@@ -17,6 +17,8 @@
 #include "common/thread.h"
 #ifdef __APPLE__
 #include <mach/mach.h>
+#include <pthread.h>
+#include <pthread/qos.h>
 #elif defined(__HAIKU__)
 #include <kernel/OS.h>
 #elif defined(_WIN32)
@@ -462,6 +464,22 @@ void SetCurrentThreadPriority(ThreadPriority new_priority) {
         }
     }();
     SetThreadPriority(GetCurrentThread(), windows_priority);
+#elif defined(__APPLE__)
+    // SCHED_OTHER has no adjustable priority range on Darwin. Use QoS for the
+    // emulation and rendering threads that must keep up with interactive frames.
+    const qos_class_t qos = [&] {
+        switch (new_priority) {
+        case ThreadPriority::Low: return QOS_CLASS_UTILITY;
+        case ThreadPriority::Normal: return QOS_CLASS_DEFAULT;
+        case ThreadPriority::High: return QOS_CLASS_USER_INITIATED;
+        case ThreadPriority::VeryHigh:
+        case ThreadPriority::Critical: return QOS_CLASS_USER_INTERACTIVE;
+        default: return QOS_CLASS_DEFAULT;
+        }
+    }();
+    if (const int error = pthread_set_qos_class_self_np(qos, 0); error != 0) {
+        LOG_WARNING(Common, "Could not set thread QoS: {}", error);
+    }
 #elif defined(__HAIKU__)
     // TODO: We have priorities for 3D rendering applications - may help lavapipe?
     int priority = [&]() {

@@ -15,6 +15,9 @@
 #include <windows.h>
 #endif
 #include <cstdio>
+#ifdef __APPLE__
+#include <execinfo.h>
+#endif
 
 #include "common/logging.h"
 #include "common/settings.h"
@@ -41,26 +44,22 @@ void Pause() {
 #endif
 }
 
-[[maybe_unused]] std::atomic<u32> g_back_thread_id{};
+thread_local bool g_is_back_thread{};
 std::atomic<bool> g_back_busy{};
 
 } // Anonymous namespace
 
 void GpuSplit::CheckOwner(const char* where) {
-#ifdef _WIN32
-    if (!g_back_busy.load(std::memory_order_acquire)) {
-        return;
-    }
-    const DWORD thread = GetCurrentThreadId();
-    if (thread == g_back_thread_id.load(std::memory_order_relaxed)) {
+    if (g_is_back_thread || !g_back_busy.load(std::memory_order_acquire)) {
         return;
     }
     static std::atomic<u32> reports{};
     if (reports.fetch_add(1) >= 12) {
         return;
     }
-    std::fprintf(stderr, "GPU split owner check: %s on thread %lu while the back runs\n", where,
-                 thread);
+    std::fprintf(stderr, "GPU split owner check: %s on another thread while the back runs\n",
+                 where);
+#ifdef _WIN32
     void* frames[40];
     const USHORT count = RtlCaptureStackBackTrace(1, 40, frames, nullptr);
     for (USHORT i = 0; i < count; ++i) {
@@ -76,10 +75,12 @@ void GpuSplit::CheckOwner(const char* where) {
                      static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frames[i]) -
                                                      reinterpret_cast<uintptr_t>(module)));
     }
-    std::fflush(stderr);
-#else
-    (void)where;
+#elif defined(__APPLE__)
+    void* frames[40];
+    const int count = backtrace(frames, 40);
+    backtrace_symbols_fd(frames, count, 2);
 #endif
+    std::fflush(stderr);
 }
 
 GpuSplit GpuSplit::instance;
@@ -145,7 +146,7 @@ void GpuSplit::Stop() {
     back_engine = nullptr;
     front_macros = false;
     published.store(0, std::memory_order_relaxed);
-    consumed.store(0, std::memory_order_relaxed);
+    consumed.Reset();
     back_waiting.store(false, std::memory_order_relaxed);
 }
 
@@ -170,14 +171,15 @@ void GpuSplit::WaitForSpace(size_t words) {
     Publish();
     Nx2Profile::Scope scope{Nx2Profile::Zone::SplitDrain};
     for (u32 spins = 0;; ++spins) {
-        consumed_cache = consumed.load(std::memory_order_acquire);
+        consumed_cache = consumed.Get();
         if (write_position + words - consumed_cache <= RingWords) {
             return;
         }
         if (spins < 4096) {
             Pause();
         } else {
-            std::this_thread::yield();
+            consumed_cache = consumed.Wait(write_position + words - RingWords);
+            return;
         }
     }
 }
@@ -196,14 +198,14 @@ void GpuSplit::Publish() {
 }
 
 void GpuSplit::Drain() {
-    consumed_cache = consumed.load(std::memory_order_acquire);
+    consumed_cache = consumed.Get();
     if (consumed_cache == write_position) {
         return;
     }
     Publish();
     Nx2Profile::Scope scope{Nx2Profile::Zone::SplitDrain};
     for (u32 spins = 0;; ++spins) {
-        consumed_cache = consumed.load(std::memory_order_acquire);
+        consumed_cache = consumed.Get();
         if (consumed_cache == write_position) {
             publish_every = 8;
             return;
@@ -211,7 +213,9 @@ void GpuSplit::Drain() {
         if (spins < 16384) {
             Pause();
         } else {
-            std::this_thread::yield();
+            consumed_cache = consumed.Wait(write_position);
+            publish_every = 8;
+            return;
         }
     }
 }
@@ -257,6 +261,31 @@ void GpuSplit::DeferFunction(std::function<void()>&& func) {
     });
 }
 
+void GpuSplit::IncreasingMethods(Tegra::Engines::EngineInterface* engine, u32 method,
+                                 const u32* words, u32 amount, bool is_last,
+                                 const GPUVAddr* segment) {
+    SelectEngine(engine);
+    GPUVAddr address = segment != nullptr ? *segment : 0;
+    while (amount > 0) {
+        const u32 piece = std::min(amount, MaxIncreasingWords);
+        const size_t head = segment != nullptr ? 2 : 1;
+        const size_t size = head + (piece + 1) / 2;
+        u64* const entry = Reserve(size);
+        entry[0] = static_cast<u64>(Kind::Increasing) | (is_last && piece == amount ? IsLast : 0) |
+                   (segment != nullptr ? HasSegment : 0) | (u64{method} << 8) | (u64{piece} << 32);
+        if (segment != nullptr) {
+            entry[1] = address;
+        }
+        entry[size - 1] = 0;
+        std::memcpy(entry + head, words, size_t{piece} * sizeof(u32));
+        Commit(size);
+        method += piece;
+        words += piece;
+        amount -= piece;
+        address += size_t{piece} * sizeof(u32);
+    }
+}
+
 size_t GpuSplit::Execute(const u64* entry) {
     const u64 head = entry[0];
     switch (static_cast<Kind>(head & 0xf)) {
@@ -299,6 +328,31 @@ size_t GpuSplit::Execute(const u64* entry) {
                                 amount, static_cast<u32>(entry[1]));
         return data + (amount + 1) / 2;
     }
+    case Kind::Increasing: {
+        const u32 first = static_cast<u32>((head >> 8) & 0xffff);
+        const u32 amount = static_cast<u32>(head >> 32);
+        const bool has_segment = (head & HasSegment) != 0;
+        const size_t data = has_segment ? 2 : 1;
+        const auto* const arguments = reinterpret_cast<const u8*>(entry + data);
+        auto* const engine = back_engine;
+        Nx2Profile::Scope method_scope{Nx2Profile::Zone::Method};
+        for (u32 i = 0; i < amount; ++i) {
+            const u32 method = first + i;
+            u32 argument;
+            std::memcpy(&argument, arguments + size_t{i} * sizeof(u32), sizeof(argument));
+            if (!engine->execution_mask[method]) {
+                engine->method_sink.emplace_back(method, argument);
+            } else {
+                engine->ConsumeSink(*system);
+                if (has_segment) {
+                    engine->current_dma_segment = entry[1] + size_t{i} * sizeof(u32);
+                }
+                engine->CallMethod(*system, method, argument,
+                                   (head & IsLast) != 0 && i + 1 == amount);
+            }
+        }
+        return data + (amount + 1) / 2;
+    }
     case Kind::Call: {
         const size_t payload = static_cast<size_t>((head >> 8) & 0xffffff);
         reinterpret_cast<void (*)(const u64*)>(entry[1])(entry + 2);
@@ -313,9 +367,7 @@ void GpuSplit::BackLoop(std::stop_token stop_token) {
     Common::SetCurrentThreadPriority(Common::ThreadPriority::Critical);
     Common::SetCurrentThreadToPerformanceCores();
     system->RegisterHostThread();
-#ifdef _WIN32
-    g_back_thread_id.store(GetCurrentThreadId(), std::memory_order_relaxed);
-#endif
+    g_is_back_thread = true;
     u64 read_position = 0;
     while (!stop_token.stop_requested()) {
         Nx2Profile::Report("GPU back thread");
@@ -348,13 +400,14 @@ void GpuSplit::BackLoop(std::stop_token stop_token) {
             read_position += size != 0 ? size : RingWords - index;
             // Hand ring space back now and then while working through a long batch.
             if (read_position - last_store >= 4096 && read_position != available) {
-                consumed.store(read_position, std::memory_order_release);
+                consumed.Publish(read_position);
                 last_store = read_position;
             }
         }
         g_back_busy.store(false, std::memory_order_release);
-        consumed.store(read_position, std::memory_order_release);
+        consumed.Publish(read_position);
     }
+    g_is_back_thread = false;
 }
 
 } // namespace VideoCommon

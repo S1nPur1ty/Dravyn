@@ -98,6 +98,9 @@ private:
     void RegisterHandlersBaseTipc(const FunctionInfoBase* functions, std::size_t n);
     void ReportUnimplementedFunction(HLERequestContext& ctx, const FunctionInfoBase* info);
 
+    std::mutex unimplemented_mutex;
+    Common::unordered_map<u64, u64> unimplemented_counts;
+
 protected:
     ::Common::unordered_map<u32, FunctionInfoBase> handlers;
     ::Common::unordered_map<u32, FunctionInfoBase> handlers_tipc;

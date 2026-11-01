@@ -119,6 +119,14 @@ void DecommitVectorPage(uintptr_t base) noexcept {
 #elif defined(__linux__)
     // Linux's MADV_DONTNEED zeros out pages for us
     madvise(reinterpret_cast<void*>(base), HostPageSize, MADV_DONTNEED);
+#elif defined(__APPLE__)
+    // Replace a complete host page with demand-zero memory. MADV_FREE followed
+    // by memset immediately dirties the page again instead of releasing it.
+    void* const result = mmap(reinterpret_cast<void*>(base), HostPageSize, PROT_READ | PROT_WRITE,
+                              MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+    if (result == MAP_FAILED) {
+        std::memset(reinterpret_cast<void*>(base), 0, HostPageSize);
+    }
 #else
     madvise(reinterpret_cast<void*>(base), HostPageSize, MADV_FREE);
     std::memset(reinterpret_cast<void*>(base), 0, HostPageSize);
@@ -148,7 +156,14 @@ void* AllocateMemoryPages(std::size_t size) noexcept {
     }
     ASSERT_MSG(base, "Failed to reserve {:#x} sized region with error {}", size, GetLastError());
 #else
-    void* base = mmap(nullptr, size, PROT_READ, MAP_ANON | MAP_PRIVATE | MAP_NOCORE, -1, 0);
+#ifdef __APPLE__
+    // Anonymous pages remain demand-zero until touched. Keeping the reservation
+    // writable avoids a protection syscall for every committed page-table page.
+    constexpr int protection = PROT_READ | PROT_WRITE;
+#else
+    constexpr int protection = PROT_READ;
+#endif
+    void* base = mmap(nullptr, size, protection, MAP_ANON | MAP_PRIVATE | MAP_NOCORE, -1, 0);
     if (base == MAP_FAILED)
         base = nullptr;
     ASSERT_MSG(base, "Failed to allocate {:#x} sized region with error {}", size, strerror(errno));

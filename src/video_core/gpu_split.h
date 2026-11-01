@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "common/common_types.h"
+#include "video_core/gpu_queue_progress.h"
 
 namespace Core {
 class System;
@@ -68,6 +69,9 @@ public:
     }
     void MultiMethod(Tegra::Engines::EngineInterface* engine, u32 method, const u32* words,
                      u32 amount, u32 methods_pending, const GPUVAddr* segment);
+    /// Consecutive register methods, retaining scalar execution and final-call semantics.
+    void IncreasingMethods(Tegra::Engines::EngineInterface* engine, u32 method, const u32* words,
+                           u32 amount, bool is_last, const GPUVAddr* segment);
     /// A write made by a macro: CallMethod without the method sink, as the engines' macros do.
     void MacroWrite(Tegra::Engines::EngineInterface* engine, u32 method, u32 argument) {
         SelectEngine(engine);
@@ -101,12 +105,15 @@ public:
     void Drain();
 
 private:
+    friend struct GpuSplitTestAccess;
+
     enum class Kind : u64 {
-        Wrap,   ///< The rest of the ring is unused: continue at its start
-        Engine, ///< The engine the next methods go to: word 1
-        Method, ///< Bits 8-23 method, 32-63 argument; flags IsLast, HasSegment (word 1)
-        Multi,  ///< Bits 8-23 method, 32-63 amount; word 1 methods pending, [segment], words
-        Call,   ///< Bits 8-31 payload size in words; word 1 thunk, then the payload
+        Wrap,       ///< The rest of the ring is unused: continue at its start
+        Engine,     ///< The engine the next methods go to: word 1
+        Method,     ///< Bits 8-23 method, 32-63 argument; flags IsLast, HasSegment (word 1)
+        Multi,      ///< Bits 8-23 method, 32-63 amount; word 1 methods pending, [segment], words
+        Call,       ///< Bits 8-31 payload size in words; word 1 thunk, then the payload
+        Increasing, ///< Bits 8-23 first method, 32-63 count; [segment], packed arguments
     };
     static constexpr u64 IsLast = 1 << 4;
     static constexpr u64 HasSegment = 1 << 5;
@@ -115,6 +122,7 @@ private:
     static constexpr size_t RingWords = size_t{1} << 20; // 8 MiB
     static constexpr size_t RingMask = RingWords - 1;
     static constexpr u32 MaxMultiWords = 8192;
+    static constexpr u32 MaxIncreasingWords = 256;
     static constexpr size_t PublishEvery = 256;
 
     template <typename Func>
@@ -167,9 +175,9 @@ private:
 
     static GpuSplit instance;
 
-    alignas(64) std::atomic<u64> published{};
-    alignas(64) std::atomic<u64> consumed{};
-    alignas(64) std::atomic<bool> back_waiting{};
+    alignas(GPU_QUEUE_CACHE_LINE) std::atomic<u64> published{};
+    GpuQueueProgress consumed;
+    alignas(GPU_QUEUE_CACHE_LINE) std::atomic<bool> back_waiting{};
     std::atomic<u32> wake{};
     std::jthread back_thread;
 };

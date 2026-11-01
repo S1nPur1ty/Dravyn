@@ -22,11 +22,19 @@ size_t ExclusiveMonitor::GetProcessorCount() const {
 }
 
 void ExclusiveMonitor::Lock() {
+#ifdef __APPLE__
+    os_unfair_lock_lock(&lock);
+#else
     lock.Lock();
+#endif
 }
 
 void ExclusiveMonitor::Unlock() {
+#ifdef __APPLE__
+    os_unfair_lock_unlock(&lock);
+#else
     lock.Unlock();
+#endif
 }
 
 bool ExclusiveMonitor::CheckAndClear(std::size_t processor_id, VAddr address) {

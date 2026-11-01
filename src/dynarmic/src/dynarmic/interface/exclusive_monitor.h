@@ -14,6 +14,10 @@
 #include <cstring>
 #include <boost/container/static_vector.hpp>
 
+#if defined(__APPLE__) && defined(__aarch64__)
+#include <os/lock.h>
+#endif
+
 #include <dynarmic/common/spin_lock.h>
 
 namespace Dynarmic {
@@ -85,7 +89,12 @@ private:
     static constexpr size_t MAX_NUM_CPU_CORES = 6; // Sync with src/core/hardware_properties
     boost::container::static_vector<VAddr, MAX_NUM_CPU_CORES> exclusive_addresses;
     boost::container::static_vector<Vector, MAX_NUM_CPU_CORES> exclusive_values;
+#if defined(__APPLE__) && defined(__aarch64__)
+    // ARM64 uses the monitor through callbacks, so it can use an OS-aware lock.
+    alignas(128) os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
+#else
     SpinLock lock;
+#endif
 };
 
 }  // namespace Dynarmic

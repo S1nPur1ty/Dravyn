@@ -77,6 +77,8 @@ public:
     }
 
 private:
+    void Swap(HostMemory& other) noexcept;
+
     size_t backing_size{};
     size_t virtual_size{};
 

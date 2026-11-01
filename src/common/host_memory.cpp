@@ -52,7 +52,9 @@
 #endif // ^^^ POSIX ^^^
 
 #include <mutex>
+#include <new>
 #include <random>
+#include <utility>
 
 #include "common/alignment.h"
 #include "common/assert.h"
@@ -518,8 +520,13 @@ public:
     {}
 
     bool Init() {
-        long page_size = sysconf(_SC_PAGESIZE);
-        ASSERT_MSG(page_size == 0x1000, "page size {:#x} is incompatible with 4K paging", page_size);
+        const long page_size = sysconf(_SC_PAGESIZE);
+        if (page_size != PageAlignment) {
+            // A larger host page cannot independently map/protect 4-KiB guest pages.
+            // Keep the JIT's software page table and anonymous backing on these hosts.
+            LOG_INFO(HW_Memory, "Using page-table memory with {}-byte host pages", page_size);
+            return false;
+        }
         // Backing memory initialization
 #if defined(__sun__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__DragonFly__)
         fd = shm_open_anon(O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
@@ -586,6 +593,7 @@ public:
         auto* ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if (ptr == MAP_FAILED) {
             LOG_CRITICAL(HW_Memory, "Failed to allocate fallback buffer with size {:#x}, {}", size, strerror(errno));
+            return nullptr;
         }
         return ptr;
     }
@@ -729,6 +737,9 @@ HostMemory::HostMemory(size_t backing_size_, size_t virtual_size_)
         backing_base = static_cast<u8*>(impl->Allocate(backing_size));
         virtual_base = nullptr;
         impl.reset();
+        if (!backing_base) {
+            throw std::bad_alloc{};
+        }
     }
 #endif
 }
@@ -745,9 +756,30 @@ HostMemory::~HostMemory() {
 #endif
 }
 
-HostMemory::HostMemory(HostMemory&&) noexcept = default;
+HostMemory::HostMemory(HostMemory&& other) noexcept {
+    Swap(other);
+}
 
-HostMemory& HostMemory::operator=(HostMemory&&) noexcept = default;
+HostMemory& HostMemory::operator=(HostMemory&& other) noexcept {
+    if (this != &other) {
+        HostMemory moved{std::move(other)};
+        Swap(moved);
+    }
+    return *this;
+}
+
+void HostMemory::Swap(HostMemory& other) noexcept {
+    using std::swap;
+    swap(backing_size, other.backing_size);
+    swap(virtual_size, other.virtual_size);
+#if !(defined(__OPENORBIS__) || defined(__managarm__))
+    swap(impl, other.impl);
+#endif
+    swap(backing_base, other.backing_base);
+    swap(virtual_base, other.virtual_base);
+    swap(virtual_base_offset, other.virtual_base_offset);
+    swap(fallback_buffer, other.fallback_buffer);
+}
 
 void HostMemory::Map(size_t virtual_offset, size_t host_offset, size_t length, MemoryPermission perms, bool separate_heap) {
 #if !(defined(__OPENORBIS__) || defined(__managarm__))

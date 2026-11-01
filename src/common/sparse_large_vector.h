@@ -178,12 +178,12 @@ private:
 
     constexpr bool CommitPage(std::size_t index) noexcept {
         auto page_index = (index * sizeof(T)) >> HostPageBits;
-        auto page = reinterpret_cast<uintptr_t>(base_ptr + index) & HostPageMask;
+        [[maybe_unused]] auto page = reinterpret_cast<uintptr_t>(base_ptr + index) & HostPageMask;
 #if defined(_WIN32)
         if (!CommitVectorPage(page, true)) {
             return false;
         }
-#else
+#elif !defined(__APPLE__)
         if (mprotect(reinterpret_cast<void*>(page), HostPageSize, PROT_READ | PROT_WRITE) != 0) {
             LOG_ERROR(Common_Memory, "Failed to commit large buffer region at index {}, error {}", index, strerror(errno));
             return false;

@@ -67,27 +67,45 @@ void ServiceFrameworkBase::RegisterHandlersBaseTipc(const FunctionInfoBase* func
 
 void ServiceFrameworkBase::ReportUnimplementedFunction(HLERequestContext& ctx,
                                                        const FunctionInfoBase* info) {
-    auto cmd_buf = ctx.CommandBuffer();
-    std::string function_name = info == nullptr ? "<unknown>" : info->name;
+    static const bool env_auto_stub = std::getenv("EDEN_NX2_AUTO_STUB") != nullptr;
+    static const bool ipc_trace = std::getenv("EDEN_NX2_IPC_TRACE") != nullptr;
+    const auto* const caller = ctx.GetThread().GetOwnerProcess();
+    const bool auto_stub = Settings::values.use_auto_stub || env_auto_stub ||
+        std::string_view{service_name}.starts_with(Nx2StubPrefix) ||
+        (caller != nullptr && caller->IsSwitch2());
+    u64 occurrences = 1;
+    if (auto_stub && !ipc_trace && !Settings::values.reporting_services.GetValue() &&
+        !Settings::values.use_debug_asserts.GetValue()) {
+        const u64 key = (static_cast<u64>(ctx.GetCommandType()) << 32) | ctx.GetCommand();
+        std::scoped_lock lock{unimplemented_mutex};
+        occurrences = ++unimplemented_counts[key];
+    }
 
-    fmt::memory_buffer buf;
-    fmt::format_to(std::back_inserter(buf), "function '{}({})': port='{}' cmd_buf={{[0]={:#x}", ctx.GetCommand(), function_name, service_name, cmd_buf[0]);
-    // The Switch 2 video decoder sessions are being reverse engineered: dump whole requests.
-    const int last_word = std::string_view{service_name}.starts_with("nx2:vdec") ? 47 : 8;
-    for (int i = 1; i <= last_word; ++i)
-        fmt::format_to(std::back_inserter(buf), ", [{}]={:#x}", i, cmd_buf[i]);
-    buf.push_back('}');
+    if (occurrences == 1) {
+        auto cmd_buf = ctx.CommandBuffer();
+        std::string function_name = info == nullptr ? "<unknown>" : info->name;
 
-    system.GetReporter().SaveUnimplementedFunctionReport(ctx, ctx.GetCommand(), function_name, service_name);
-    UNIMPLEMENTED_MSG("Unknown / unimplemented {}", fmt::to_string(buf));
+        fmt::memory_buffer buf;
+        fmt::format_to(std::back_inserter(buf), "function '{}({})': port='{}' cmd_buf={{[0]={:#x}", ctx.GetCommand(), function_name, service_name, cmd_buf[0]);
+        // The Switch 2 video decoder sessions are being reverse engineered: dump whole requests.
+        const int last_word = std::string_view{service_name}.starts_with("nx2:vdec") ? 47 : 8;
+        for (int i = 1; i <= last_word; ++i)
+            fmt::format_to(std::back_inserter(buf), ", [{}]={:#x}", i, cmd_buf[i]);
+        buf.push_back('}');
+
+        system.GetReporter().SaveUnimplementedFunctionReport(ctx, ctx.GetCommand(), function_name, service_name);
+        UNIMPLEMENTED_MSG("Unknown / unimplemented {}", fmt::to_string(buf));
+    } else if ((occurrences & (occurrences - 1)) == 0) {
+        LOG_WARNING(Service, "Auto-stubbed {}::{} {} times (request type {}); repeated dumps suppressed",
+                    service_name, ctx.GetCommand(), occurrences,
+                    static_cast<u32>(ctx.GetCommandType()));
+    }
     // EDEN_NX2_AUTO_STUB=1 auto-stubs every unknown command without touching the config. Switch 2
     // programs are always auto-stubbed: they still call many commands nobody has implemented.
-    static const bool env_auto_stub = std::getenv("EDEN_NX2_AUTO_STUB") != nullptr;
-    const auto* const caller = ctx.GetThread().GetOwnerProcess();
-    if (Settings::values.use_auto_stub || env_auto_stub ||
-        std::string_view{service_name}.starts_with(Nx2StubPrefix) ||
-        (caller != nullptr && caller->IsSwitch2())) {
-        LOG_WARNING(Service, "Using auto stub fallback!");
+    if (auto_stub) {
+        if (occurrences == 1) {
+            LOG_WARNING(Service, "Using auto stub fallback!");
+        }
         IPC::ResponseBuilder rb{ctx, 2};
         rb.Push(ResultSuccess);
     }

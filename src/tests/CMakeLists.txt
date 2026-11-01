@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 add_executable(tests
+    common/apple_memory.cpp
     common/bit_field.cpp
     common/cityhash.cpp
     common/container_hash.cpp
@@ -19,6 +20,9 @@ add_executable(tests
     core/core_timing.cpp
     core/internal_network/network.cpp
     video_core/memory_tracker.cpp
+    video_core/gpu_queue_progress.cpp
+    video_core/gpu_batching.cpp
+    video_core/descriptor_reuse.cpp
     video_core/ampere_returns.cpp
     input_common/calibration_configuration_job.cpp
 )

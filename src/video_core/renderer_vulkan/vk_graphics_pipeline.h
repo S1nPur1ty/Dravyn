@@ -170,6 +170,9 @@ private:
     u32 num_textures{};
     bool fragment_has_color0_output{};
 
+    std::vector<VideoCommon::ImageViewInOut> draw_views;
+    std::vector<VideoCommon::SamplerId> draw_samplers;
+
     vk::DescriptorSetLayout descriptor_set_layout;
     DescriptorAllocator descriptor_allocator;
     vk::PipelineLayout pipeline_layout;
@@ -178,6 +181,7 @@ private:
 
     DescriptorBufferLayout descriptor_buffer_layout;
     std::vector<DescriptorUpdateEntry> last_descriptor_payload;
+    DescriptorPayloadCache descriptor_payload_cache;
     VkDeviceSize last_descriptor_buffer_offset{};
     u32 last_descriptor_buffer_chunk{};
     u64 last_descriptor_buffer_generation{};

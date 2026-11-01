@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstring>
+#include <span>
 #include <variant>
 #include <vector>
 #include "video_core/vulkan_common/vulkan_wrapper.h"
@@ -32,6 +34,23 @@ union DescriptorUpdateEntry {
     VkDescriptorBufferInfo buffer;
     VkBufferView texel_buffer;
     DescriptorAddress address;
+};
+
+/// Reuses bindings only after comparing the freshly resolved resource payload.
+class DescriptorPayloadCache {
+public:
+    bool Update(std::span<const DescriptorUpdateEntry> entries, bool invalidated) {
+        if (!invalidated && payload.size() == entries.size() &&
+            (entries.empty() ||
+             std::memcmp(payload.data(), entries.data(), entries.size_bytes()) == 0)) {
+            return false;
+        }
+        payload.assign(entries.begin(), entries.end());
+        return true;
+    }
+
+private:
+    std::vector<DescriptorUpdateEntry> payload;
 };
 
 class UpdateDescriptorQueue final {

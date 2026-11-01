@@ -224,8 +224,18 @@ size_t DmaPusher::ProcessCommands(std::span<const CommandHeader> commands, size_
             dma_state.is_last_call = true;
             index += max_write;
         } else if (dma_state.method_count) {
-            auto const command_header = commands[index]; //can copy
             dma_state.dma_word_offset = u64((word_offset + index) * sizeof(u32));
+            const u32 batched =
+                TryIncreasingMethods(&commands[index].argument, commands.size() - index);
+            if (batched != 0) {
+                dma_state.is_last_call = batched == dma_state.method_count;
+                dma_state.method += batched;
+                dma_state.method_count -= batched;
+                dma_state.dma_word_offset += size_t{batched - 1} * sizeof(u32);
+                index += batched;
+                continue;
+            }
+            auto const command_header = commands[index]; // can copy
             dma_state.is_last_call = dma_state.method_count <= 1;
             CallMethod(command_header.argument);
             dma_state.method += !dma_state.non_incrementing ? 1 : 0;
@@ -344,6 +354,28 @@ bool DmaPusher::WantsSegment() const {
     const auto engine = subchannel_type[dma_state.subchannel];
     return engine == Engines::EngineTypes::KeplerCompute ||
            (engine == Engines::EngineTypes::Maxwell3D && dma_state.method >= MacroRegistersStart);
+}
+
+u32 DmaPusher::TryIncreasingMethods(const u32* arguments, size_t available) {
+    auto& split = VideoCommon::GpuSplit::Get();
+    // Puller commands may suspend the channel. Front macros and IncreaseOnce
+    // retain their existing paths; batches stop before the macro registers.
+    if (!split.Active() || split.FrontMacros() || dma_increment_once ||
+        dma_state.method < non_puller_methods || dma_state.method >= MacroRegistersStart ||
+        g_semaphore_watch != 0) {
+        return 0;
+    }
+    auto* const engine = subchannels[dma_state.subchannel];
+    const u32 count =
+        static_cast<u32>(std::min<size_t>(std::min<size_t>(available, dma_state.method_count),
+                                          MacroRegistersStart - dma_state.method));
+    if (engine == nullptr || count < 2) {
+        return 0;
+    }
+    const GPUVAddr segment = dma_state.dma_get + dma_state.dma_word_offset;
+    split.IncreasingMethods(engine, dma_state.method, arguments, count,
+                            count == dma_state.method_count, WantsSegment() ? &segment : nullptr);
+    return count;
 }
 
 void DmaPusher::CallMethod(u32 argument) {
