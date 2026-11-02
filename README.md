@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="dist/dravyn.png" alt="Dravyn dragon" width="160" />
+  <img src="dist/dravyn.png?v=03b7292a0d" alt="Dravyn dragon" width="224" />
 </p>
 <h1 align="center">Dravyn</h1>
 <p align="center"><strong>Your games. Your Mac.</strong></p>
