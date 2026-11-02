@@ -31,6 +31,12 @@ def package(bundle, binary, output, version, minimum_os):
         if magic not in (b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf',
                          b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca'):
             continue
+        identity = subprocess.check_output(['otool', '-D', str(file)], text=True).splitlines()
+        frameworks = app / 'Contents/Frameworks'
+        if len(identity) > 1 and identity[1].startswith('/') and file.is_relative_to(frameworks):
+            subprocess.run(['install_name_tool', '-id',
+                            '@rpath/' + str(file.relative_to(frameworks)), str(file)], check=True)
+            subprocess.run(['codesign', '--force', '--sign', '-', str(file)], check=True)
         libraries = subprocess.check_output(['otool', '-L', str(file)], text=True)
         for line in libraries.splitlines()[1:]:
             dependency = line.strip().split(' (', 1)[0]
