@@ -30,6 +30,6 @@ private:
 
     QSize m_size;
     QSize m_contentSize;
-    int m_padding;
-    int m_columns;
+    int m_padding = 0;
+    int m_columns = 1;
 };

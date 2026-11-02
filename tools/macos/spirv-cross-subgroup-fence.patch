@@ -1,0 +1,13 @@
+diff --git a/spirv_msl.cpp b/spirv_msl.cpp
+index db40c443..76f05aec 100644
+--- a/spirv_msl.cpp
++++ b/spirv_msl.cpp
+@@ -10761,7 +10761,7 @@ void CompilerMSL::emit_barrier(uint32_t id_exe_scope, uint32_t id_mem_scope, uin
+ 			break;
+ 
+ 		case ScopeSubgroup:
+-			bar_stmt += ", thread_scope_subgroup";
++			bar_stmt += ", thread_scope_simdgroup";
+ 			break;
+ 
+ 		case ScopeInvocation:

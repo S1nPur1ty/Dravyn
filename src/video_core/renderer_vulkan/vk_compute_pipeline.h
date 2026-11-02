@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -50,7 +51,13 @@ public:
 
     [[nodiscard]] bool Configure(Tegra::Engines::KeplerCompute& kepler_compute,
                                  Tegra::MemoryManager& gpu_memory, Scheduler& scheduler,
-                                 BufferCache& buffer_cache, TextureCache& texture_cache);
+                                 BufferCache& buffer_cache, TextureCache& texture_cache,
+                                 StagingBufferPool& staging_pool,
+                                 const std::array<u32, 3>& dispatch_size);
+
+    bool UsesStorageSharedMemory() const noexcept {
+        return info.shared_memory_storage_size != 0;
+    }
 
     bool IsBound() const noexcept {
         return static_cast<bool>(pipeline);

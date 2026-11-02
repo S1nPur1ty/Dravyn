@@ -170,16 +170,6 @@ constexpr VkBorderColor ConvertBorderColor(const std::array<float, 4>& color) {
     return bytes * info.resources.layers > (u64{1} << 30);
 }
 
-// A large image over Switch 2 sparse blocks nobody has written (title 1's terrain layer pools, 2.9
-// GB of R8/RG16/R16 that stay empty in the attract demo) is all zeros: it gets no device memory
-// until a write makes the texture cache replace it.
-[[nodiscard]] bool IsUnwrittenSparse(const ImageInfo& info, GPUVAddr gpu_addr) {
-    constexpr u32 MinSize = 32U << 20;
-    const u32 size = VideoCommon::CalculateGuestSizeInBytes(info);
-    return size >= MinSize && info.type != ImageType::e1D && info.type != ImageType::Buffer &&
-           info.type != ImageType::Linear && Tegra::Nx2SparseUnwritten(gpu_addr, size);
-}
-
 // A large color array in a Switch 2 sparse region (title 1's terrain arrays: 13-26% of their
 // blocks written) gets memory by layer, as its layers are written: unbacked at first, then
 // Image::BindLayers. Only formats uploaded layer by layer: huge ASTC arrays (GPU decode) and
@@ -1172,6 +1162,18 @@ StagingBufferRef TextureCacheRuntime::UploadStagingBuffer(size_t size, bool defe
     return staging_buffer_pool.Request(size, MemoryUsage::Upload, deferred);
 }
 
+bool TextureCacheRuntime::UseBoundedTextureUploads() const {
+    return device.GetDriverID() == VK_DRIVER_ID_MOLTENVK;
+}
+
+StagingBufferRef TextureCacheRuntime::StreamUploadStagingBuffer(size_t size) {
+    return staging_buffer_pool.RequestStreamUpload(size);
+}
+
+void TextureCacheRuntime::CommitStreamUpload() {
+    staging_buffer_pool.CommitStreamUpload();
+}
+
 StagingBufferRef TextureCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {
     return staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);
 }
@@ -2099,20 +2101,12 @@ Image::Image(TextureCacheRuntime& runtime_, const ImageInfo& info_, GPUVAddr gpu
                                    ? std::span<const VkFormat>{OpaqueAstcViewFormats}
                                    : runtime->ViewFormats(info.format),
                                AstcHostFormat(runtime_.device, info),
-                               UsesSparseLayers(runtime_.device, info, gpu_addr_) ||
-                                   IsUnwrittenSparse(info, gpu_addr_))),
+                               UsesSparseLayers(runtime_.device, info, gpu_addr_))),
       aspect_mask(ImageAspectMask(info.format)) {
     if (original_image.IsUnbacked()) {
         flags |= VideoCommon::ImageFlagBits::Unbacked;
-        const ImageInfo host_info = TrimmedHostInfo(runtime_.device, info, host_level_offset);
-        const u64 texels = u64{host_info.size.width} * host_info.size.height *
-                           host_info.size.depth * static_cast<u64>(host_info.resources.layers);
         if (UsesSparseLayers(runtime_.device, info, gpu_addr_) && InitSparseLayers()) {
             flags |= VideoCommon::ImageFlagBits::SparseLayers;
-        } else if (texels <= (u64{1} << 28)) {
-            // Not too big to back (see MemoryAllocator::CreateImage): unbacked because nothing
-            // was written there yet, so the first write gets it replaced.
-            flags |= VideoCommon::ImageFlagBits::UnwrittenSparse;
         }
     }
     if (host_level_offset != 0) {

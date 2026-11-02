@@ -3,6 +3,7 @@
 
 // Static Qt on macOS doesn't use Vulkan
 // Other platforms do, and thus have conflicting VulkanMemoryAllocator symbols
+#include "yuzu/util/design_system.h"
 #include "core/launch_params.h"
 #if defined(QT_STATICPLUGIN) && !defined(__APPLE__)
 #undef VMA_IMPLEMENTATION
@@ -55,6 +56,9 @@
 #include "configuration/configure_per_game.h"
 #include "configuration/configure_tas.h"
 
+#include "util/animation.h"
+#include "util/animated_icon_button.h"
+#include "util/popup.h"
 #include "util/clickable_label.h"
 #include "util/controller_navigation.h"
 #include "util/overlay_dialog.h"
@@ -80,6 +84,7 @@
 #include <QMimeData>
 #include <QPalette>
 #include <QProgressDialog>
+#include <QPropertyAnimation>
 #include <QScreen>
 #include <QShortcut>
 #include <QStatusBar>
@@ -434,7 +439,24 @@ MainWindow::MainWindow(bool has_broken_vulkan)
 
     UpdateWindowTitle();
 
+    const bool animate_entrance = UIAnimation::IsEnabled(this);
+    if (animate_entrance) {
+        setWindowOpacity(0.0);
+    }
     show();
+    if (animate_entrance) {
+        auto* entrance = new QPropertyAnimation(this, "windowOpacity", this);
+        entrance->setDuration(350);
+        entrance->setStartValue(0.0);
+        entrance->setEndValue(1.0);
+        entrance->setEasingCurve(QEasingCurve::OutCubic);
+        connect(entrance, &QPropertyAnimation::finished, game_list,
+                &GameList::FinishWindowEntrance);
+        QTimer::singleShot(0, entrance,
+                           [entrance] { entrance->start(QAbstractAnimation::DeleteWhenStopped); });
+    } else {
+        game_list->FinishWindowEntrance();
+    }
 
 #ifdef ENABLE_UPDATE_CHECKER
     if (UISettings::values.check_for_updates) {
@@ -449,8 +471,7 @@ MainWindow::MainWindow(bool has_broken_vulkan)
     // Setup content providers.
     QtCommon::SetupContentProviders();
 
-    // Gen keys if necessary
-    OnCheckFirmwareDecryption();
+    UpdateFirmwareStatus();
 
 #ifdef __unix__
     OnCheckGraphicsBackend();
@@ -554,6 +575,9 @@ MainWindow::MainWindow(bool has_broken_vulkan)
 }
 
 MainWindow::~MainWindow() {
+    // Join the library worker before the play-time manager and content providers are destroyed.
+    delete game_list;
+    game_list = nullptr;
 #ifdef __APPLE__
     AllowOSSleep();
 #endif
@@ -998,10 +1022,12 @@ void MainWindow::InitializeWidgets() {
     tas_label->setFocusPolicy(Qt::NoFocus);
     statusBar()->insertPermanentWidget(0, tas_label);
 
-    volume_popup = new QWidget(this);
-    volume_popup->setWindowFlags(Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint | Qt::Popup);
+    volume_popup = new UIControls::RoundedPopup(this);
     volume_popup->setLayout(new QVBoxLayout());
-    volume_popup->setMinimumWidth(200);
+    volume_popup->setObjectName(QStringLiteral("VolumePopup"));
+    volume_popup->setStyleSheet(UIControls::PopupStyle());
+    volume_popup->setFixedWidth(240);
+    volume_popup->layout()->setContentsMargins(18, 16, 18, 16);
 
     volume_slider = new QSlider(Qt::Horizontal);
     volume_slider->setObjectName(QStringLiteral("volume_slider"));
@@ -1022,11 +1048,13 @@ void MainWindow::InitializeWidgets() {
     });
     connect(volume_button, &QPushButton::clicked, this, [&] {
         UpdateVolumeUI();
-        volume_popup->setVisible(!volume_popup->isVisible());
-        QRect rect = volume_button->geometry();
-        QPoint bottomLeft = statusBar()->mapToGlobal(rect.topLeft());
-        bottomLeft.setY(bottomLeft.y() - volume_popup->geometry().height());
-        volume_popup->setGeometry(QRect(bottomLeft, QSize(rect.width(), rect.height())));
+        if (volume_popup->isVisible()) {
+            volume_popup->hide();
+            return;
+        }
+        volume_popup->adjustSize();
+        volume_popup->move(UIControls::PopupPosition(volume_button, volume_popup->size(), false));
+        volume_popup->show();
     });
     volume_button->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(volume_button, &QPushButton::customContextMenuRequested,
@@ -1043,7 +1071,7 @@ void MainWindow::InitializeWidgets() {
                     UpdateVolumeUI();
                 });
 
-                context_menu.exec(volume_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, volume_button);
                 volume_button->repaint();
             });
     connect(volume_button, &VolumeButton::VolumeChanged, this, &MainWindow::UpdateVolumeUI);
@@ -1051,7 +1079,7 @@ void MainWindow::InitializeWidgets() {
     statusBar()->insertPermanentWidget(0, volume_button);
 
 #ifdef HAS_RESHADE
-    post_shader_status_button = new QPushButton();
+    post_shader_status_button = new UIControls::Button();
     post_shader_status_button->setObjectName(QStringLiteral("TogglableStatusBarButton"));
     post_shader_status_button->setFocusPolicy(Qt::NoFocus);
     post_shader_status_button->setCheckable(true);
@@ -1079,14 +1107,14 @@ void MainWindow::InitializeWidgets() {
                 context_menu.addAction(tr("Configure Effects..."), this,
                                        &MainWindow::OnPostProcessingShaders);
 
-                context_menu.exec(post_shader_status_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, post_shader_status_button);
                 post_shader_status_button->repaint();
             });
     statusBar()->insertPermanentWidget(0, post_shader_status_button);
 #endif
 
     // setup AA button
-    aa_status_button = new QPushButton();
+    aa_status_button = new UIControls::Button();
     aa_status_button->setObjectName(QStringLiteral("TogglableStatusBarButton"));
     aa_status_button->setFocusPolicy(Qt::NoFocus);
     connect(aa_status_button, &QPushButton::clicked, [&] {
@@ -1111,36 +1139,51 @@ void MainWindow::InitializeWidgets() {
                         UpdateAAText();
                     });
                 }
-                context_menu.exec(aa_status_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, aa_status_button);
                 aa_status_button->repaint();
             });
     statusBar()->insertPermanentWidget(0, aa_status_button);
 
     // Setup Filter button
-    filter_status_button = new QPushButton();
+    filter_status_button = new UIControls::Button();
     filter_status_button->setObjectName(QStringLiteral("TogglableStatusBarButton"));
     filter_status_button->setFocusPolicy(Qt::NoFocus);
     connect(filter_status_button, &QPushButton::clicked, this, &MainWindow::OnToggleAdaptingFilter);
     UpdateFilterText();
     filter_status_button->setCheckable(true);
     filter_status_button->setChecked(true);
-    filter_status_button->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(filter_status_button, &QPushButton::customContextMenuRequested,
-            [this](const QPoint& menu_location) {
-                QMenu context_menu;
-                for (auto const& filter_text_pair : ConfigurationShared::scaling_filter_texts_map) {
-                    context_menu.addAction(filter_text_pair.second, [this, filter_text_pair] {
-                        Settings::values.scaling_filter.SetValue(filter_text_pair.first);
-                        UpdateFilterText();
-                    });
-                }
-                context_menu.exec(filter_status_button->mapToGlobal(menu_location));
-                filter_status_button->repaint();
+    auto* filter_controls = new QWidget();
+    auto* filter_layout = new QHBoxLayout(filter_controls);
+    filter_layout->setContentsMargins(0, 0, 0, 0);
+    filter_layout->setSpacing(0);
+    filter_layout->addWidget(filter_status_button);
+    auto* filter_menu_button = new AnimatedIconButton(filter_controls);
+    filter_menu_button->setObjectName(QStringLiteral("StatusMenuArrow"));
+    filter_menu_button->setIconSize(QSize(16, 16));
+    filter_menu_button->SetGlyph(QIcon(QStringLiteral(":/library/chevron-down.svg")));
+    filter_menu_button->setFixedSize(24, 28);
+    filter_menu_button->setCursor(Qt::PointingHandCursor);
+    filter_menu_button->setAccessibleName(tr("Select scaling filter"));
+    filter_menu_button->setToolTip(tr("Select scaling filter"));
+    filter_layout->addWidget(filter_menu_button);
+    connect(filter_menu_button, &QPushButton::clicked, this, [this, filter_controls, filter_menu_button] {
+        QMenu menu;
+        for (const auto& [filter, text] : ConfigurationShared::scaling_filter_texts_map) {
+            auto* action = menu.addAction(text, this, [this, filter] {
+                Settings::values.scaling_filter.SetValue(filter);
+                UpdateFilterText();
             });
-    statusBar()->insertPermanentWidget(0, filter_status_button);
+            action->setCheckable(true);
+            action->setChecked(filter == Settings::values.scaling_filter.GetValue());
+        }
+        filter_menu_button->SetExpanded(true);
+        UIControls::ExecStatusMenu(menu, filter_controls);
+        filter_menu_button->SetExpanded(false);
+    });
+    statusBar()->insertPermanentWidget(0, filter_controls);
 
     // Setup Dock button
-    dock_status_button = new QPushButton();
+    dock_status_button = new UIControls::Button();
     dock_status_button->setObjectName(QStringLiteral("DockingStatusBarButton"));
     dock_status_button->setFocusPolicy(Qt::NoFocus);
     connect(dock_status_button, &QPushButton::clicked, this, &MainWindow::OnToggleDockedMode);
@@ -1158,13 +1201,13 @@ void MainWindow::InitializeWidgets() {
                         }
                     });
                 }
-                context_menu.exec(dock_status_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, dock_status_button);
                 dock_status_button->repaint();
             });
     statusBar()->insertPermanentWidget(0, dock_status_button);
 
     // Setup GPU Accuracy button
-    gpu_accuracy_button = new QPushButton();
+    gpu_accuracy_button = new UIControls::Button();
     gpu_accuracy_button->setObjectName(QStringLiteral("GPUStatusBarButton"));
     gpu_accuracy_button->setCheckable(true);
     gpu_accuracy_button->setFocusPolicy(Qt::NoFocus);
@@ -1181,13 +1224,13 @@ void MainWindow::InitializeWidgets() {
                         UpdateGPUAccuracyButton();
                     });
                 }
-                context_menu.exec(gpu_accuracy_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, gpu_accuracy_button);
                 gpu_accuracy_button->repaint();
             });
     statusBar()->insertPermanentWidget(0, gpu_accuracy_button);
 
     // Setup Renderer API button
-    renderer_status_button = new QPushButton();
+    renderer_status_button = new UIControls::Button();
     renderer_status_button->setObjectName(QStringLiteral("RendererStatusBarButton"));
     renderer_status_button->setCheckable(true);
     renderer_status_button->setFocusPolicy(Qt::NoFocus);
@@ -1212,22 +1255,33 @@ void MainWindow::InitializeWidgets() {
                             UpdateAPIText();
                         });
                 }
-                context_menu.exec(renderer_status_button->mapToGlobal(menu_location));
+                UIControls::ExecStatusMenu(context_menu, renderer_status_button);
                 renderer_status_button->repaint();
             });
     statusBar()->insertPermanentWidget(0, renderer_status_button);
 
-    // Setup Refresh Button
-    refresh_button = new QPushButton();
-    refresh_button->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
-    refresh_button->setObjectName(QStringLiteral("RefreshButton"));
-    refresh_button->setFocusPolicy(Qt::NoFocus);
-    connect(refresh_button, &QPushButton::clicked, this, &MainWindow::OnGameListRefresh);
+    connect(game_list, &GameList::RefreshRequested, this, &MainWindow::OnGameListRefresh);
+    connect(game_list, &GameList::SettingsRequested, this, &MainWindow::OnConfigure);
 
-    statusBar()->insertPermanentWidget(0, refresh_button);
-
+    for (auto* button : {renderer_status_button, gpu_accuracy_button, dock_status_button,
+                         filter_status_button, aa_status_button, post_shader_status_button,
+                         static_cast<QPushButton*>(volume_button)}) {
+        if (button) {
+            button->setFlat(true);
+            button->setFixedHeight(28);
+            button->setCursor(Qt::PointingHandCursor);
+        }
+    }
+    for (auto* label : {message_label, shader_building_label, res_scale_label, emu_speed_label,
+                        game_fps_label, emu_frametime_label, tas_label, firmware_label}) {
+        label->setMinimumHeight(28);
+        label->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    }
     statusBar()->setVisible(true);
-    setStyleSheet(QStringLiteral("QStatusBar::item{border: none;}"));
+    QFile status_style(QStringLiteral(":/library/status-bar.qss"));
+    if (status_style.open(QIODevice::ReadOnly)) {
+        statusBar()->setStyleSheet(QString::fromUtf8(status_style.readAll()));
+    }
 }
 
 void MainWindow::InitializeDebugWidgets() {
@@ -1840,7 +1894,7 @@ bool MainWindow::LoadROM(const QString& filename, Service::AM::FrontendAppletPar
             tr("You are using the deconstructed ROM directory format for this game, which is an "
                "outdated format that has been superseded by others such as NCA, NAX, XCI, or "
                "NSP. Deconstructed ROM directories lack icons, metadata, and update "
-               "support.<br>For an explanation of the various Switch formats Eglantine supports, "
+               "support.<br>For an explanation of the various Switch formats Dravyn supports, "
                "out our user handbook. This message will not be shown again."));
     }
 
@@ -1907,7 +1961,8 @@ bool MainWindow::SelectAndSetCurrentUser(
 
 void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletParameters params,
                           StartGameType type) {
-    LOG_INFO(Frontend, "Eglantine starting...");
+    game_list->PrepareForLaunch();
+    LOG_INFO(Frontend, "Dravyn starting...");
 
     if (params.program_id == 0 ||
         params.program_id > static_cast<u64>(Service::AM::AppletProgramId::MaxProgramId)) {
@@ -2020,7 +2075,6 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
     }
     status_bar_update_timer.start(500);
     renderer_status_button->setDisabled(true);
-    refresh_button->setDisabled(true);
     SetFPSSuffix();
 
     if (UISettings::values.hide_mouse || Settings::values.mouse_panning) {
@@ -2185,7 +2239,7 @@ void MainWindow::OnEmulationStopped() {
     } else {
         game_list->show();
     }
-    game_list->SetFilterFocus();
+    game_list->setFocus();
     tas_label->clear();
     input_subsystem->GetTas()->Stop();
     OnTasStateChanged();
@@ -2209,7 +2263,6 @@ void MainWindow::OnEmulationStopped() {
     game_fps_label->setVisible(false);
     emu_frametime_label->setVisible(false);
     renderer_status_button->setEnabled(!UISettings::values.has_broken_vulkan);
-    refresh_button->setEnabled(true);
 
     if (!firmware_label->text().isEmpty()) {
         firmware_label->setVisible(true);
@@ -3887,12 +3940,12 @@ void MainWindow::OnVerifyInstalledContents() {
 
 void MainWindow::OnInstallFirmware() {
     QtCommon::Content::InstallFirmware();
-    OnCheckFirmwareDecryption();
+    UpdateFirmwareStatus();
 }
 
 void MainWindow::OnInstallFirmwareFromZIP() {
     QtCommon::Content::InstallFirmwareZip();
-    OnCheckFirmwareDecryption();
+    UpdateFirmwareStatus();
 }
 
 // TODO(crueter): QtCommon this: game list populate can be a signal?
@@ -3904,7 +3957,7 @@ void MainWindow::OnInstallDecryptionKeys() {
     QtCommon::Content::InstallKeys();
 
     game_list->PopulateAsync(UISettings::values.game_dirs);
-    OnCheckFirmwareDecryption();
+    UpdateFirmwareStatus();
 }
 
 void MainWindow::OnAbout() {
@@ -3963,7 +4016,6 @@ void MainWindow::OnGameListRefresh() {
     // Resets metadata cache and reloads
     QtCommon::Game::ResetMetadata(false);
     game_list->RefreshGameDirectory();
-    game_list->RefreshExternalContent();
     SetFirmwareVersion();
 }
 
@@ -4392,17 +4444,7 @@ void MainWindow::OnMouseActivity() {
     }
 }
 
-void MainWindow::OnCheckFirmwareDecryption() {
-    if (!ContentManager::AreKeysPresent()) {
-        const auto res = QtCommon::Frontend::Warning(
-            tr("Derivation Components Missing"),
-            tr("Decryption keys are missing. Install them now?"),
-            QtCommon::Frontend::StandardButton::Yes | QtCommon::Frontend::StandardButton::No);
-
-        if (res == QtCommon::Frontend::StandardButton::Yes)
-            OnInstallDecryptionKeys();
-    }
-
+void MainWindow::UpdateFirmwareStatus() {
     SetFirmwareVersion();
     UpdateMenuState();
 }
@@ -4452,7 +4494,7 @@ void MainWindow::OnCheckGraphicsBackend() {
         UISettings::values.gui_force_x11.SetValue(true);
         GraphicsBackend::SetForceX11(true);
         QMessageBox::information(this, tr("Restart Required"),
-                                 tr("Restart Eglantine to apply the X11 backend."));
+                                 tr("Restart Dravyn to apply the X11 backend."));
     }
 }
 #endif
@@ -4571,16 +4613,35 @@ bool MainWindow::ConfirmClose() {
         UISettings::values.confirm_before_stopping.GetValue() == ConfirmStop::Ask_Based_On_Game)
         return true;
 
-    const auto text = tr("Are you sure you want to close Eglantine?");
-    return question(this, tr("Eglantine"), text);
+    const auto text = tr("Are you sure you want to close Dravyn?");
+    return question(this, tr("Dravyn"), text);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    if (!ConfirmClose()) {
+    if (close_fading) {
+        event->ignore();
+        return;
+    }
+    if (!close_confirmed && !ConfirmClose()) {
         event->ignore();
         return;
     }
 
+    if (!close_confirmed && UIAnimation::IsEnabled(this)) {
+        event->ignore();
+        close_confirmed = true;
+        close_fading = true;
+        auto* fade = new QPropertyAnimation(this, "windowOpacity", this);
+        fade->setDuration(160);
+        fade->setStartValue(windowOpacity());
+        fade->setEndValue(0.0);
+        connect(fade, &QPropertyAnimation::finished, this, [this] {
+            close_fading = false;
+            close();
+        });
+        fade->start(QAbstractAnimation::DeleteWhenStopped);
+        return;
+    }
     UpdateUISettings();
     game_list->SaveInterfaceLayout();
     UISettings::SaveWindowState();
@@ -4660,7 +4721,7 @@ bool MainWindow::ConfirmChangeGame() {
 
     // Use custom question to link controller navigation
     return question(
-        this, tr("Eglantine"),
+        this, tr("Dravyn"),
         tr("Are you sure you want to stop the emulation? Any unsaved progress will be lost."),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 }
@@ -4669,10 +4730,10 @@ bool MainWindow::ConfirmForceLockedExit() {
     if (QtCommon::emu_thread == nullptr)
         return true;
 
-    const auto text = tr("The currently running application has requested Eglantine to not exit.\n\n"
+    const auto text = tr("The currently running application has requested Dravyn to not exit.\n\n"
                          "Would you like to bypass this and exit anyway?");
 
-    return question(this, tr("Eglantine"), text);
+    return question(this, tr("Dravyn"), text);
 }
 
 void MainWindow::RequestGameExit() {
@@ -4738,12 +4799,13 @@ void MainWindow::UpdateUITheme() {
     QFile f(theme_uri);
     if (f.open(QFile::ReadOnly | QFile::Text)) {
         QTextStream ts(&f);
-        qApp->setStyleSheet(ts.readAll());
-        setStyleSheet(ts.readAll());
+        qApp->setStyleSheet(ts.readAll() + UIControls::SharedStyle());
+        setStyleSheet({});
+        UIControls::ApplyPalette(this);
     } else {
         LOG_ERROR(Frontend, "Unable to set style \"{}\", stylesheet file not found",
                   UISettings::values.theme);
-        qApp->setStyleSheet({});
+        qApp->setStyleSheet(UIControls::SharedStyle());
         setStyleSheet({});
     }
 

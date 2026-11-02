@@ -11,6 +11,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
+#include <QStandardItemModel>
 #include <QTimer>
 #include "common/assert.h"
 #include "common/param_package.h"
@@ -362,6 +363,24 @@ ConfigureInputPlayer::ConfigureInputPlayer(QWidget* parent, std::size_t player_i
     analog_map_range_spinbox = {ui->spinboxLStickRange, ui->spinboxRStickRange};
 
     ui->controllerFrame->SetController(emulated_controller);
+    ui->bindingGroup->setProperty("settingsNavigation", true);
+    ui->comboDevices->setProperty("settingsNavigation", true);
+    ui->comboProfiles->setProperty("settingsNavigation", true);
+    connect(ui->bindingGroup, &QComboBox::currentIndexChanged, ui->bindingPages,
+            &QStackedWidget::setCurrentIndex);
+    connect(ui->controllerFrame, &PlayerControlPreview::ButtonClicked, this, [this](int button_id) {
+        using namespace Settings::NativeButton;
+        const int page = button_id <= Y                             ? 0
+                         : button_id >= DLeft && button_id <= DDown ? 3
+                         : button_id >= L && button_id <= ZR        ? 4
+                                                                    : 5;
+        ui->bindingGroup->setCurrentIndex(page);
+        if (auto* button = button_map[button_id]; button && button->isEnabled()) {
+            button->click();
+        }
+    });
+    connect(ui->controllerFrame, &PlayerControlPreview::StickClicked, this,
+            [this](int stick_id) { ui->bindingGroup->setCurrentIndex(stick_id + 1); });
 
     for (int button_id = 0; button_id < Settings::NativeButton::NumButtons; ++button_id) {
         auto* const button = button_map[button_id];
@@ -445,6 +464,7 @@ ConfigureInputPlayer::ConfigureInputPlayer(QWidget* parent, std::size_t player_i
                         });
                     }
                     context_menu.exec(button_map[button_id]->mapToGlobal(menu_location));
+                    emit BindingsChanged();
                 });
     }
 
@@ -488,6 +508,7 @@ ConfigureInputPlayer::ConfigureInputPlayer(QWidget* parent, std::size_t player_i
                         });
                     }
                     context_menu.exec(motion_map[motion_id]->mapToGlobal(menu_location));
+                    emit BindingsChanged();
                 });
     }
 
@@ -1081,6 +1102,7 @@ void ConfigureInputPlayer::UpdateUI() {
         modifier_slider->setVisible(!is_controller);
         range_groupbox->setVisible(is_controller);
     }
+    emit BindingsChanged();
 }
 
 void ConfigureInputPlayer::SetConnectableControllers() {
@@ -1168,6 +1190,14 @@ int ConfigureInputPlayer::GetIndexFromControllerType(Core::HID::NpadStyleIndex t
     return it->first;
 }
 
+void ConfigureInputPlayer::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    const bool narrow = width() < 850;
+    ui->canvasLayout->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    ui->bindingPane->setMaximumWidth(narrow ? QWIDGETSIZE_MAX : 360);
+    ui->canvasLayout->setStretch(0, 1);
+}
+
 void ConfigureInputPlayer::UpdateInputDevices() {
     input_devices = input_subsystem->GetInputDevices();
     ui->comboDevices->clear();
@@ -1184,25 +1214,18 @@ void ConfigureInputPlayer::UpdateControllerAvailableButtons() {
 
     // List of all the widgets that will be hidden by any of the following layouts that need
     // "unhidden" after the controller type changes
-    const std::array<QWidget*, 19> layout_show = {
+    const std::array<QWidget*, 12> layout_show = {
         ui->buttonShoulderButtonsSLSRLeft,
         ui->buttonShoulderButtonsSLSRRight,
-        ui->horizontalSpacerShoulderButtonsWidget,
-        ui->horizontalSpacerShoulderButtonsWidget2,
-        ui->horizontalSpacerShoulderButtonsWidget3,
-        ui->horizontalSpacerShoulderButtonsWidget4,
         ui->buttonShoulderButtonsLeft,
         ui->buttonMiscButtonsMinusGroup,
-        ui->bottomLeft,
         ui->LStick,
         ui->Dpad,
         ui->buttonShoulderButtonsRight,
         ui->buttonMiscButtonsPlusGroup,
         ui->buttonMiscButtonsHomeGroup,
-        ui->bottomRight,
         ui->faceButtons,
         ui->RStick,
-        ui->buttonMiscButtonsMinusGroup,
         ui->buttonMiscButtonsScreenshotGroup,
     };
 
@@ -1215,16 +1238,14 @@ void ConfigureInputPlayer::UpdateControllerAvailableButtons() {
     case Core::HID::NpadStyleIndex::Fullkey:
     case Core::HID::NpadStyleIndex::Handheld:
         layout_hidden = {
-            ui->buttonShoulderButtonsSLSRLeft,          ui->buttonShoulderButtonsSLSRRight,
-            ui->horizontalSpacerShoulderButtonsWidget2, ui->horizontalSpacerShoulderButtonsWidget4,
+            ui->buttonShoulderButtonsSLSRLeft,
+            ui->buttonShoulderButtonsSLSRRight,
             ui->buttonMiscButtonsScreenshotGroup,
         };
         break;
     case Core::HID::NpadStyleIndex::JoyconLeft:
         layout_hidden = {
             ui->buttonShoulderButtonsSLSRRight,
-            ui->horizontalSpacerShoulderButtonsWidget2,
-            ui->horizontalSpacerShoulderButtonsWidget3,
             ui->buttonShoulderButtonsRight,
             ui->buttonMiscButtonsPlusGroup,
             ui->buttonMiscButtonsHomeGroup,
@@ -1236,8 +1257,6 @@ void ConfigureInputPlayer::UpdateControllerAvailableButtons() {
     case Core::HID::NpadStyleIndex::JoyconRight:
         layout_hidden = {
             ui->buttonShoulderButtonsSLSRLeft,
-            ui->horizontalSpacerShoulderButtonsWidget,
-            ui->horizontalSpacerShoulderButtonsWidget4,
             ui->buttonShoulderButtonsLeft,
             ui->buttonMiscButtonsMinusGroup,
             ui->LStick,
@@ -1249,8 +1268,6 @@ void ConfigureInputPlayer::UpdateControllerAvailableButtons() {
         layout_hidden = {
             ui->buttonShoulderButtonsSLSRLeft,
             ui->buttonShoulderButtonsSLSRRight,
-            ui->horizontalSpacerShoulderButtonsWidget2,
-            ui->horizontalSpacerShoulderButtonsWidget4,
             ui->buttonMiscButtonsMinusGroup,
             ui->buttonMiscButtonsScreenshotGroup,
         };
@@ -1269,6 +1286,19 @@ void ConfigureInputPlayer::UpdateControllerAvailableButtons() {
     for (auto* widget : layout_hidden) {
         widget->hide();
     }
+
+    auto* groups = qobject_cast<QStandardItemModel*>(ui->bindingGroup->model());
+    const bool left_only = layout == Core::HID::NpadStyleIndex::JoyconLeft;
+    const bool right_only = layout == Core::HID::NpadStyleIndex::JoyconRight;
+    const std::array enabled{
+        !left_only, !right_only, !left_only, !right_only, true, true, left_only || right_only};
+    for (int i = 0; i < static_cast<int>(enabled.size()); ++i) {
+        groups->item(i)->setEnabled(enabled[i]);
+    }
+    if (!enabled[ui->bindingGroup->currentIndex()]) {
+        ui->bindingGroup->setCurrentIndex(left_only ? 1 : 0);
+    }
+    ui->canvasHint->setVisible(layout == Core::HID::NpadStyleIndex::Fullkey);
 }
 
 void ConfigureInputPlayer::UpdateControllerEnabledButtons() {
@@ -1550,6 +1580,11 @@ void ConfigureInputPlayer::mousePressEvent(QMouseEvent* event) {
 }
 
 void ConfigureInputPlayer::wheelEvent(QWheelEvent* event) {
+    if (!input_setter) {
+        event->ignore();
+        return;
+    }
+    event->accept();
     const int x = event->angleDelta().x();
     const int y = event->angleDelta().y();
     input_subsystem->GetMouse()->MouseWheelChange(x, y);
@@ -1689,4 +1724,18 @@ void ConfigureInputPlayer::UpdateInputProfiles() {
 
     LOG_DEBUG(Frontend, "Setting the current input profile to index {}", profile_index);
     ui->comboProfiles->setCurrentIndex(profile_index);
+}
+
+QStringList ConfigureInputPlayer::BindingState() const {
+    QStringList result;
+    for (int i = 0; i < Settings::NativeButton::NumButtons; ++i) {
+        result.append(QString::fromStdString(emulated_controller->GetButtonParam(i).Serialize()));
+    }
+    for (int i = 0; i < Settings::NativeAnalog::NumAnalogs; ++i) {
+        result.append(QString::fromStdString(emulated_controller->GetStickParam(i).Serialize()));
+    }
+    for (int i = 0; i < Settings::NativeMotion::NumMotions; ++i) {
+        result.append(QString::fromStdString(emulated_controller->GetMotionParam(i).Serialize()));
+    }
+    return result;
 }

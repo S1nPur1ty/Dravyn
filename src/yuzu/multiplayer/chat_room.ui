@@ -42,7 +42,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="send_message">
+        <widget class="UIControls::Button" name="send_message">
          <property name="text">
           <string>Send Message</string>
          </property>
@@ -54,6 +54,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

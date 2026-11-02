@@ -169,6 +169,7 @@ public:
     ~EmitContext();
 
     [[nodiscard]] Id Def(const IR::Value& value);
+    [[nodiscard]] Id SharedU32Pointer(Id word_index);
 
     [[nodiscard]] Id BitOffset8(const IR::Value& offset);
     [[nodiscard]] Id BitOffset16(const IR::Value& offset);
@@ -263,6 +264,7 @@ public:
     std::vector<ImageDefinition> images;
 
     Id workgroup_id{};
+    Id num_workgroups{};
     Id local_invocation_id{};
     Id invocation_id{};
     Id patch_vertices_in{};
@@ -314,6 +316,7 @@ public:
     bool uses_explicit_workgroup_layout{};
     Id shared_memory_u8{};
     Id shared_memory_u16{};
+    u32 shared_memory_storage_size{};
     Id shared_memory_u32{};
     Id shared_memory_u64{};
     Id shared_memory_u32x2{};
@@ -383,7 +386,7 @@ private:
     void DefineCommonConstants();
     void DefineInterfaces(const IR::Program& program);
     void DefineLocalMemory(const IR::Program& program);
-    void DefineSharedMemory(const IR::Program& program);
+    void DefineSharedMemory(const IR::Program& program, u32& binding);
     void DefineSharedMemoryFunctions(const IR::Program& program);
     void DefineConstantBuffers(const Info& info, u32& binding);
     void DefineConstantBufferIndirectFunctions(const Info& info);

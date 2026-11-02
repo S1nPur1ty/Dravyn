@@ -4,6 +4,7 @@
 // SPDX-FileCopyrightText: Copyright 2017 Citra Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <QFile>
 #include <QInputDialog>
 #include <QList>
 #include <QtConcurrentRun>
@@ -14,8 +15,8 @@
 #include "core/internal_network/network_interface.h"
 #include "network/network.h"
 #include "qt_common/config/uisettings.h"
-#include "ui_lobby.h"
 #include "qt_common/game_list/game_list_p.h"
+#include "ui_lobby.h"
 #include "yuzu/main_window.h"
 #include "yuzu/multiplayer/client_room.h"
 #include "yuzu/multiplayer/lobby.h"
@@ -32,6 +33,20 @@ Lobby::Lobby(QWidget* parent, QStandardItemModel* list,
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowSystemMenuHint),
       ui(std::make_unique<Ui::Lobby>()), announce_multiplayer_session(session), system{system_} {
     ui->setupUi(this);
+    QFile style(QStringLiteral(":/library/network.qss"));
+    if (style.open(QIODevice::ReadOnly)) {
+        setStyleSheet(QString::fromUtf8(style.readAll()));
+    }
+    setMinimumSize(760, 460);
+    ui->refresh_list->setIconSize(QSize(18, 18));
+    ui->refresh_list->SetGlyph(QIcon(QStringLiteral(":/library/refresh.svg")));
+    ui->refresh_list->setCursor(Qt::PointingHandCursor);
+    ui->refresh_list->setMinimumWidth(110);
+    ui->refresh_list->setEnabled(!announce_multiplayer_session.expired());
+    for (auto* field : {ui->nickname, ui->search}) {
+        field->setFixedHeight(40);
+    }
+    ui->refresh_list->setFixedHeight(40);
 
     // setup the watcher for background connections
     watcher = new QFutureWatcher<void>;
@@ -48,9 +63,22 @@ Lobby::Lobby(QWidget* parent, QStandardItemModel* list,
     proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
     proxy->setSortLocaleAware(true);
     ui->room_list->setModel(proxy);
-    ui->room_list->header()->setSectionResizeMode(QHeaderView::Interactive);
-    ui->room_list->header()->stretchLastSection();
-    ui->room_list->setAlternatingRowColors(true);
+    const auto update_summary = [this] {
+        if (!room_list_watcher.isRunning()) {
+            ui->room_summary->setText(proxy->rowCount() == 0
+                                          ? tr("No rooms match your filters.")
+                                          : tr("%n room(s)", nullptr, proxy->rowCount()));
+        }
+    };
+    connect(proxy, &QAbstractItemModel::rowsInserted, this, update_summary);
+    connect(proxy, &QAbstractItemModel::rowsRemoved, this, update_summary);
+    connect(proxy, &QAbstractItemModel::modelReset, this, update_summary);
+    connect(&room_list_watcher, &QFutureWatcherBase::finished, this, update_summary);
+
+    ui->room_list->header()->setStretchLastSection(false);
+    ui->room_list->header()->setMinimumSectionSize(80);
+    ui->room_list->setAlternatingRowColors(false);
+    ui->room_list->setIconSize(QSize(24, 24));
     ui->room_list->setSelectionMode(QHeaderView::SingleSelection);
     ui->room_list->setSelectionBehavior(QHeaderView::SelectRows);
     ui->room_list->setVerticalScrollMode(QHeaderView::ScrollPerPixel);
@@ -233,14 +261,20 @@ void Lobby::ResetModel() {
 }
 
 void Lobby::RefreshLobby() {
+    if (room_list_watcher.isRunning()) {
+        return;
+    }
     if (auto session = announce_multiplayer_session.lock()) {
         ResetModel();
+        ui->room_summary->setText(tr("Finding rooms…"));
         ui->refresh_list->setEnabled(false);
+        ui->refresh_list->SetSpinning(true);
         ui->refresh_list->setText(tr("Refreshing"));
         room_list_watcher.setFuture(
             QtConcurrent::run([session]() { return session->GetRoomList(); }));
     } else {
-        // TODO(jroweboy): Display an error box about announce couldn't be started
+        ui->refresh_list->setEnabled(false);
+        ui->room_summary->setText(tr("Room browsing is unavailable."));
     }
 }
 
@@ -291,13 +325,16 @@ void Lobby::OnRefreshLobby() {
         }
     }
 
-    // Re-enable the refresh button and resize the columns
+    // Re-enable the refresh button and fit the columns to the available space.
+    ui->refresh_list->SetSpinning(false);
     ui->refresh_list->setEnabled(true);
-    ui->refresh_list->setText(tr("Refresh List"));
-    ui->room_list->header()->stretchLastSection();
-    for (int i = 0; i < Column::TOTAL - 1; ++i) {
-        ui->room_list->resizeColumnToContents(i);
-    }
+    ui->refresh_list->setText(tr("Refresh"));
+    auto* header = ui->room_list->header();
+    header->setSectionResizeMode(Column::GAME_NAME, QHeaderView::Stretch);
+    header->setSectionResizeMode(Column::ROOM_NAME, QHeaderView::Stretch);
+    header->setSectionResizeMode(Column::MEMBER, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(Column::HOST, QHeaderView::Interactive);
+    header->resizeSection(Column::HOST, 140);
 
     // Set the member list child items to span all columns
     for (int i = 0; i < proxy->rowCount(); i++) {

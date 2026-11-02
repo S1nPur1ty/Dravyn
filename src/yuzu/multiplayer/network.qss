@@ -1,0 +1,15 @@
+QWidget#Lobby { background: #18181b; color: #eeeef1; }
+QLabel { color: #b9b9c5; background: transparent; font-size: 12px; }
+QLabel#room_title { color: #eeeef1; font-size: 24px; font-weight: 600; }
+QTreeView { background: #252529; color: #dedee6; border: 1px solid #2d2d34; border-radius: 16px; padding: 8px; font-size: 12px; outline: none; selection-background-color: transparent; }
+QTreeView::item { padding: 10px 8px; border: none; background: transparent; }
+QTreeView::item:hover { color: white; }
+QTreeView::item:selected { background: transparent; color: white; }
+QTreeView::branch { background: transparent; }
+QHeaderView { background: transparent; }
+QHeaderView::section { background: #252529; color: #9c9caa; border: none; border-bottom: 1px solid #303037; padding: 12px 8px; font-size: 11px; }
+
+QFrame#networkFilters { background: #252529; border: none; border-radius: 16px; }
+QLabel#room_summary { color: #aaa8b2; padding: 2px 4px; }
+QTreeView { border: none; border-radius: 16px; padding: 12px; }
+QTreeView::item { padding: 14px 10px; }

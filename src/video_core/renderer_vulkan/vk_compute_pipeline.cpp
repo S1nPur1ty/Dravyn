@@ -150,9 +150,9 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
 
 bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
                                 Tegra::MemoryManager& gpu_memory, Scheduler& scheduler,
-                                BufferCache& buffer_cache, TextureCache& texture_cache) {
-    guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
-
+                                BufferCache& buffer_cache, TextureCache& texture_cache,
+                                StagingBufferPool& staging_pool,
+                                const std::array<u32, 3>& dispatch_size) {
     buffer_cache.SetComputeUniformBufferState(info.constant_buffer_mask, &uniform_buffer_sizes);
     buffer_cache.UnbindComputeStorageBuffers();
     size_t ssbo_index{};
@@ -245,6 +245,8 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     std::ranges::for_each(info.texture_buffer_descriptors, add_buffer);
     std::ranges::for_each(info.image_buffer_descriptors, add_buffer);
 
+    // Texture refresh may submit bounded upload batches; reserve descriptors afterwards.
+    guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
     buffer_cache.UpdateComputeBuffers();
     buffer_cache.BindHostComputeBuffers();
     if (buffer_cache.any_buffer_uploaded) {
@@ -252,11 +254,31 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         buffer_cache.any_buffer_uploaded = false;
     }
 
+    std::optional<StagingBufferRef> shared_memory;
+    VkDeviceSize shared_size{};
+    if (info.shared_memory_storage_size) {
+        // A distinct slice per workgroup preserves shared-memory isolation across the dispatch.
+        shared_size = info.shared_memory_storage_size;
+        const u64 limit = std::min<u64>(device.GetMaxStorageBufferRange(), UINT32_MAX);
+        for (const u32 count : dispatch_size) {
+            if (count == 0 || shared_size > limit / count) {
+                LOG_ERROR(Render_Vulkan, "Shared-memory backing exceeds the storage buffer limit");
+                return false;
+            }
+            shared_size *= count;
+        }
+        shared_memory = staging_pool.Request(shared_size, MemoryUsage::DeviceLocal);
+    }
+
     RescalingPushConstant rescaling;
     const VideoCommon::SamplerId* samplers_it{samplers.data()};
     const VideoCommon::ImageViewInOut* views_it{views.data()};
     PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling, samplers_it,
                          views_it);
+    if (shared_memory) {
+        guest_descriptor_queue.AddBuffer(shared_memory->buffer, shared_memory->device_address,
+                                         shared_memory->offset, shared_size);
+    }
 
     if (!is_built.load(std::memory_order::relaxed)) {
         // Wait for the pipeline to be built

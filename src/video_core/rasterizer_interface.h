@@ -35,6 +35,9 @@ enum class LoadCallbackStage {
     Prepare,
     Build,
     Complete,
+    RestoreCache,
+    ReadCache,
+    SaveCache,
 };
 using DiskResourceLoadCallback = std::function<void(LoadCallbackStage, std::size_t, std::size_t)>;
 

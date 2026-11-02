@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>NewUserDialog</class>
  <widget class="QDialog" name="NewUserDialog">
@@ -25,53 +25,53 @@
     </widget>
    </item>
    <item row="1" column="2">
-    <widget class="QPushButton" name="setAvatar">
+    <widget class="UIControls::Button" name="setAvatar">
      <property name="text">
-      <string>Change Avatar</string>
+      <string>Choose avatar</string>
      </property>
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QPushButton" name="selectImage">
+    <widget class="UIControls::Button" name="selectImage">
      <property name="text">
-      <string>Set Image</string>
+      <string>Choose image</string>
      </property>
     </widget>
    </item>
    <item row="1" column="3">
     <widget class="QToolButton" name="revert">
      <property name="text">
-      <string/>
+      <string>Reset</string>
      </property>
     </widget>
    </item>
    <item row="0" column="0" colspan="4">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="0">
+     <item row="2" column="0" colspan="2">
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>UUID</string>
+        <string>Profile ID</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1" colspan="2">
+     <item row="1" column="0" colspan="2">
       <widget class="QLineEdit" name="username">
        <property name="text">
-        <string>Eglantine</string>
+        <string>Dravyn</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1" colspan="2">
-      <widget class="QLineEdit" name="uuid"/>
+     <item row="3" column="0" colspan="2">
+      <widget class="QLineEdit" name="uuid" />
      </item>
-     <item row="0" column="0">
+     <item row="0" column="0" colspan="2">
       <widget class="QLabel" name="label_2">
        <property name="text">
         <string>Username</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="4" column="0" colspan="2">
       <widget class="QLabel" name="label_3">
        <property name="font">
         <font>
@@ -81,16 +81,19 @@
        <property name="text">
         <string>UUID must be 32 hex characters (0-9, A-F)</string>
        </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
-     <item row="2" column="2">
-      <widget class="QPushButton" name="generate">
+     <item row="4" column="2" colspan="1">
+      <widget class="UIControls::Button" name="generate">
        <property name="text">
         <string>Generate</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="3">
+     <item row="3" column="2" colspan="1">
       <widget class="QLabel" name="uuidVerified">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -106,10 +109,10 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="3">
+     <item row="1" column="2" colspan="1">
       <widget class="QLabel" name="usernameVerified">
        <property name="text">
-        <string/>
+        <string />
        </property>
       </widget>
      </item>
@@ -154,7 +157,14 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
  <connections>
   <connection>
    <sender>buttonBox</sender>

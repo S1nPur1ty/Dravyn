@@ -19,6 +19,7 @@
 #include "ui_configure_input.h"
 #include "ui_configure_input_advanced.h"
 #include "ui_configure_input_player.h"
+#include "yuzu/configuration/change_tracker.h"
 #include "yuzu/configuration/configure_camera.h"
 #include "yuzu/configuration/configure_debug_controller.h"
 #include "yuzu/configuration/configure_input.h"
@@ -34,10 +35,16 @@ namespace {
 template <typename Dialog, typename... Args>
 void CallConfigureDialog(ConfigureInput& parent, Args&&... args) {
     Dialog dialog(&parent, std::forward<Args>(args)...);
+    ConfigurationShared::ChangeTracker changes(&dialog, [](bool) {});
+    changes.Watch(&dialog);
+    changes.Accept();
 
     const auto res = dialog.exec();
     if (res == QDialog::Accepted) {
         dialog.ApplyConfiguration();
+        if (changes.IsDirty()) {
+            emit parent.ChildConfigurationChanged();
+        }
     }
 }
 } // Anonymous namespace
@@ -199,6 +206,14 @@ void ConfigureInput::PropagatePlayerNumberChanged(size_t player_index, bool chec
     if (reconnect_current) {
         connected_controller_checkboxes[player_index]->setCheckState(Qt::Checked);
     }
+}
+
+QRadioButton* ConfigureInput::DockedModeButton() const {
+    return ui->radioDocked;
+}
+
+QRadioButton* ConfigureInput::HandheldModeButton() const {
+    return ui->radioUndocked;
 }
 
 QList<QWidget*> ConfigureInput::GetSubTabs() const {

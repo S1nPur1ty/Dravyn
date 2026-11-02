@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "yuzu/util/design_system.h"
 #include "profile_avatar_dialog.h"
 
 #include <QBoxLayout>
@@ -12,11 +13,11 @@
 
 // TODO: Move this to a .ui def
 ProfileAvatarDialog::ProfileAvatarDialog(QWidget* parent)
-    : QDialog{parent}, avatar_list{new QListWidget(this)}, bg_color_button{new QPushButton(this)} {
+    : QDialog{parent}, avatar_list{new QListWidget(this)}, bg_color_button{new UIControls::Button(this)} {
     auto* main_layout = new QVBoxLayout(this);
     auto* button_layout = new QHBoxLayout();
-    auto* select_button = new QPushButton(tr("Select"), this);
-    auto* cancel_button = new QPushButton(tr("Cancel"), this);
+    auto* select_button = new UIControls::Button(tr("Select"), this);
+    auto* cancel_button = new UIControls::Button(tr("Cancel"), this);
     auto* bg_color_label = new QLabel(tr("Background Color"), this);
 
     SetBackgroundColor(Qt::white);

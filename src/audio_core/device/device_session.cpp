@@ -60,6 +60,7 @@ void DeviceSession::Finalize() {
         Stop();
         sink->CloseStream(stream);
         stream = nullptr;
+        initialized = false;
     }
 
     if (handle) {

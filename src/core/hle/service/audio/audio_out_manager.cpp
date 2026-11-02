@@ -4,7 +4,9 @@
 // SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "audio_core/audio_core.h"
 #include "common/string_util.h"
+#include "core/core.h"
 #include "core/hle/service/audio/audio_out.h"
 #include "core/hle/service/audio/audio_out_manager.h"
 #include "core/hle/service/cmif_serialization.h"
@@ -15,7 +17,7 @@ using namespace AudioCore::AudioOut;
 
 IAudioOutManager::IAudioOutManager(Core::System& system_)
     : ServiceFramework{system_, "audout:u"}
-    , impl(system_)
+    , impl(system_.AudioCore().GetAudioOutManager())
 {
     // clang-format off
     static const FunctionInfo functions[] = {
@@ -77,23 +79,24 @@ Result IAudioOutManager::OpenAudioOutAuto(
     }
 
     size_t new_session_id{};
-    R_TRY(impl->LinkToManager());
-    R_TRY(impl->AcquireSessionId(new_session_id));
+    R_TRY(impl.LinkToManager());
+    std::scoped_lock lock{impl.mutex};
+    R_TRY(impl.AcquireSessionId(new_session_id));
 
     const auto device_name = Common::StringFromBuffer(name[0].name);
     LOG_DEBUG(Service_Audio, "Opening new AudioOut, sessionid={}, free sessions={}", new_session_id,
-              impl->num_free_sessions);
+              impl.num_free_sessions);
 
-    auto audio_out = std::make_shared<IAudioOut>(system, *impl, new_session_id, device_name,
+    auto audio_out = std::make_shared<IAudioOut>(system, impl, new_session_id, device_name,
                                                  parameter, process_handle.Get(), aruid.pid);
     R_TRY(audio_out->GetImpl()->GetSystem().Initialize(device_name, parameter, process_handle.Get(),
                                                        aruid.pid));
 
     *out_audio_out = audio_out;
-    impl->sessions[new_session_id] = audio_out->GetImpl();
-    impl->applet_resource_user_ids[new_session_id] = aruid.pid;
+    impl.sessions[new_session_id] = audio_out->GetImpl();
+    impl.applet_resource_user_ids[new_session_id] = aruid.pid;
 
-    auto& out_system = impl->sessions[new_session_id]->GetSystem();
+    auto& out_system = impl.sessions[new_session_id]->GetSystem();
     *out_parameter_internal =
         AudioOutParameterInternal{.sample_rate = out_system.GetSampleRate(),
                                   .channel_count = out_system.GetChannelCount(),
@@ -104,8 +107,8 @@ Result IAudioOutManager::OpenAudioOutAuto(
 }
 
 Result IAudioOutManager::SetAllAudioOutVolume(f32 volume) {
-    std::scoped_lock l{impl->mutex};
-    for (auto& session : impl->sessions) {
+    std::scoped_lock l{impl.mutex};
+    for (auto& session : impl.sessions) {
         if (session) {
             session->GetSystem().SetVolume(volume);
         }

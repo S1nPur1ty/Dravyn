@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>ConfigureDebug</class>
  <widget class="QScrollArea" name="ConfigureDebug">
@@ -24,7 +24,7 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_1">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="horizontalLayout">
       <property name="topMargin">
        <number>0</number>
       </property>
@@ -118,6 +118,9 @@
                  <property name="text">
                   <string>Port:</string>
                  </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -157,7 +160,7 @@
          <string>Logging</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_1">
-         <item row="0" column="0" colspan="4">
+         <item row="0" column="0">
           <widget class="QWidget" name="logging_widget" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -189,10 +192,13 @@
               <property name="text">
                <string>Global Log Filter</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="log_filter_edit"/>
+             <widget class="QLineEdit" name="log_filter_edit" />
             </item>
            </layout>
           </widget>
@@ -223,10 +229,13 @@
               <property name="text">
                <string>GPU Logging/Level</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="gpu_log_level">
+             <widget class="UIControls::ComboBox" name="gpu_log_level">
               <property name="toolTip">
                <string>Detail level for GPU logs. Off disables logging entirely.</string>
               </property>
@@ -260,14 +269,14 @@
            </layout>
           </widget>
          </item>
-         <item row="1" column="1">
+         <item row="2" column="0">
           <widget class="QCheckBox" name="toggle_console">
            <property name="text">
             <string>Show Log in Console</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="2">
+         <item row="3" column="0">
           <widget class="QCheckBox" name="extended_logging">
            <property name="enabled">
             <bool>true</bool>
@@ -280,19 +289,13 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="3">
-          <widget class="QPushButton" name="open_log_button">
+         <item row="4" column="0">
+          <widget class="UIControls::Button" name="open_log_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
              <horstretch>1</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>250</width>
-             <height>0</height>
-            </size>
            </property>
            <property name="text">
             <string>Open Log Location</string>
@@ -317,10 +320,13 @@
            <property name="text">
             <string>Arguments String</string>
            </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="homebrew_args_edit"/>
+          <widget class="QLineEdit" name="homebrew_args_edit" />
          </item>
         </layout>
        </item>
@@ -328,7 +334,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <layout class="QVBoxLayout" name="horizontalLayout_2">
       <item>
        <widget class="QGroupBox" name="groupBox_4">
         <property name="title">
@@ -591,10 +597,13 @@
               <property name="text">
                <string>Battery Serial:</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="serial_battery_edit"/>
+             <widget class="QLineEdit" name="serial_battery_edit" />
             </item>
            </layout>
           </widget>
@@ -630,6 +639,9 @@
               </property>
               <property name="text">
                <string>Debug Knobs:</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -690,10 +702,13 @@
               <property name="text">
                <string>Unit Serial:</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="serial_board_edit"/>
+             <widget class="QLineEdit" name="serial_board_edit" />
             </item>
            </layout>
           </widget>
@@ -784,10 +799,13 @@
        </font>
       </property>
       <property name="text">
-    <string>**This will be reset automatically when Eglantine closes.</string>
+       <string>**This will be reset automatically when Dravyn closes.</string>
       </property>
       <property name="indent">
        <number>20</number>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -808,6 +826,18 @@
   <tabstop>quest_flag</tabstop>
   <tabstop>use_debug_asserts</tabstop>
  </tabstops>
- <resources/>
- <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
 </ui>

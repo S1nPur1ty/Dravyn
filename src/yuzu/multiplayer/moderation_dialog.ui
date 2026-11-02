@@ -36,7 +36,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="refresh">
+         <widget class="UIControls::Button" name="refresh">
           <property name="text">
            <string>Refreshing</string>
           </property>
@@ -46,7 +46,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="unban">
+         <widget class="UIControls::Button" name="unban">
           <property name="text">
            <string>Unban</string>
           </property>
@@ -80,5 +80,12 @@
    <slot>accept()</slot>
   </connection>
  </connections>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
 </ui>

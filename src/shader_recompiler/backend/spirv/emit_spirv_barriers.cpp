@@ -19,7 +19,8 @@ void EmitBarrier(EmitContext& ctx) {
     const auto execution{spv::Scope::Workgroup};
     const auto memory{spv::Scope::Workgroup};
     const auto memory_semantics{spv::MemorySemanticsMask::AcquireRelease |
-                                spv::MemorySemanticsMask::WorkgroupMemory};
+        (ctx.shared_memory_storage_size ? spv::MemorySemanticsMask::UniformMemory
+                                        : spv::MemorySemanticsMask::WorkgroupMemory)};
     ctx.OpControlBarrier(ctx.Const(static_cast<u32>(execution)),
                          ctx.Const(static_cast<u32>(memory)),
                          ctx.Const(static_cast<u32>(memory_semantics)));

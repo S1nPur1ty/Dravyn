@@ -16,6 +16,7 @@ AudioCore::AudioCore(Core::System& system) {
     CreateSinks();
     // Must be created after the sinks
     adsp.emplace(system, *output_sink);
+    audio_out_manager.emplace(system);
 }
 
 AudioCore ::~AudioCore() {
@@ -37,6 +38,10 @@ void AudioCore::Shutdown() {
 
 AudioManager& AudioCore::GetAudioManager() {
     return *audio_manager;
+}
+
+AudioOut::Manager& AudioCore::GetAudioOutManager() {
+    return *audio_out_manager;
 }
 
 Sink::Sink& AudioCore::GetOutputSink() {

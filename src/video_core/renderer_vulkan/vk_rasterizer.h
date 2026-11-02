@@ -7,10 +7,16 @@
 #pragma once
 
 #include <array>
+#include <atomic>
+#include <filesystem>
+#include <cstdlib>
+#include <set>
 
 #include <boost/container/static_vector.hpp>
 
 #include "common/common_types.h"
+#include "common/thread_worker.h"
+#include "video_core/frame_trace.h"
 #include "video_core/control/channel_state_cache.h"
 #include "video_core/engines/maxwell_dma.h"
 #include "video_core/host1x/gpu_device_memory_manager.h"
@@ -154,6 +160,25 @@ private:
     static constexpr size_t MAX_IMAGE_VIEWS = MAX_TEXTURES + MAX_IMAGES;
 
     static constexpr VkDeviceSize DEFAULT_BUFFER_SIZE = 4 * sizeof(float);
+
+    bool draw_diagnostics_enabled{std::getenv("EDEN_DRAW_DIAGNOSTICS") != nullptr};
+    VideoCommon::DrawDiagnostics draw_diagnostics;
+    u64 diagnostic_frame{};
+    bool texture_diagnostics_enabled{std::getenv("EDEN_TEXTURE_DIAGNOSTICS") != nullptr};
+    static constexpr size_t MaxTextureDiagnosticEntries = 2048;
+    std::set<std::array<u64, 8>> texture_diagnostic_keys;
+    void ReportDrawTextures(const GraphicsPipeline& pipeline);
+    void ReportDrawTrace(bool is_indexed, const GraphicsPipeline* pipeline,
+                         VideoCommon::DrawFailure failure);
+    void FlushDrawTrace(bool frame_ended);
+    void BeginDrawTrace();
+    VideoCommon::FrameTrace frame_trace;
+    std::filesystem::path frame_trace_directory;
+    std::unique_ptr<Common::ThreadWorker> frame_trace_writer;
+    std::atomic<u32> frame_trace_pending{};
+    u64 frame_trace_sequence{};
+    u64 frame_trace_draw{};
+    u32 frame_trace_burst{};
 
     template <typename Func>
     void PrepareDraw(bool is_indexed, Func&&);

@@ -288,6 +288,10 @@ public:
         return std::fread(data.data(), sizeof(T), data.size(), file);
     }
 
+    // Positional reads from read-only files. On POSIX this leaves the file cursor
+    // untouched and permits concurrent reads while the caller keeps the file open.
+    [[nodiscard]] size_t ReadAt(std::span<u8> data, u64 offset) const;
+
     /**
      * Writes a span of T data to a file sequentially.
      * This function writes from the current position of the file pointer and

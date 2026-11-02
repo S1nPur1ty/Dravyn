@@ -22,7 +22,7 @@
      <item>
       <widget class="QGroupBox" name="groupBoxWebConfig">
        <property name="title">
-        <string>Eglantine Web Service</string>
+        <string>Dravyn Web Service</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayoutYuzuWebService">
         <item>
@@ -94,7 +94,7 @@
            </widget>
           </item>
           <item row="2" column="4">
-           <widget class="QPushButton" name="button_generate">
+           <widget class="UIControls::Button" name="button_generate">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -167,6 +167,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

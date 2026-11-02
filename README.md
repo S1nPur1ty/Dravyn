@@ -1,73 +1,26 @@
-<!--
-# SPDX-FileCopyrightText: Copyright 2025 Eden Emulator Project
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Dravyn
 
-# SPDX-FileCopyrightText: 2018 yuzu Emulator Project
-# SPDX-License-Identifier: GPL-2.0-or-later
--->
-<!-- lang: en-GB -->
+<img src="dist/dravyn.png" alt="Dravyn dragon" width="128" />
 
-<h1 align="center">
-  <br>
-  <a href="https://git.eden-emu.dev/eden-emu/eden"><img src="https://github.com/user-attachments/assets/35031845-4bfa-4916-8bf5-bc3bce67d5e2" alt="Eglantine" width="200"></a>
-  <br>
-  <b>Eglantine</b>
-  <br>
-</h1>
+A macOS-focused emulator for Apple Silicon, with a clean game library, controller configuration, and a Vulkan renderer powered by MoltenVK.
 
-<h4 align="center"><b>Eglantine</b> is a free and opensource (FOSS) Switch 2 emulator, derived from Eden, Yuzu and Sudachi - started by developer Camille LaVey.
-It's written in C++ with portability in mind, with builds for Windows, Linux and macOS
-</h4>
+**Preview software.** Game compatibility varies. Missing character geometry, reflections, and other rendering issues remain under investigation. A successful build is not a guarantee that every game works.
 
-<p align="center">
-    </a>
-    <a href="https://discord.gg/jCCZ58VExk">
-        <img src="https://img.shields.io/discord/1367654015269339267?color=5865F2&label=Eglantine&logo=discord&logoColor=white"
-            alt="Discord">
-    </a>
-  
-</p>
+- [Download the Mac preview](https://github.com/S1nPur1ty/Dravyn/releases)
+- [Build and package for macOS](docs/build/Dravyn-macOS.md)
+- [Report an issue](https://github.com/S1nPur1ty/Dravyn/issues)
+- [Upstream project documentation](docs/UPSTREAM_README.md)
 
-<p align="center">
-  <a href="#compatibility">Compatibility</a> |
-  <a href="#development">Development</a> |
-  <a href="#building">Building</a> |
-  <a href="#download">Download</a> |
-  <a href="#support">Support</a> |
-  <a href="#license">License</a>
-</p>
+## Mac preview
 
-## Compatibility
+The distributed ARM64 build requires an Apple Silicon Mac running macOS 26 or later, matching its bundled dependencies. Intel Macs are not supported by this download. The app is ad-hoc signed, not Apple-notarized.
 
-The emulator is capable of running Mario Kart World at decent/full speed depending on specs and configurations, and Splatoon Raiders at variable performances
+Open the DMG, drag Dravyn to Applications, and launch it. If macOS blocks the app, review the warning and use System Settings → Privacy & Security → Open Anyway only if you trust the download. Do not disable Gatekeeper globally.
 
-A list of supported games will be available in future. Please be patient.
+Game files, firmware, and console keys are not included. Supply your own required files through the app. The public build has its own stable `dravyn` settings/cache profile; experimental diagnostics are disabled by default.
 
-## Development
-For development discussions, please join us on [Discord](https://discord.gg/jCCZ58VExk)
+## Credits and license
 
-If you would like to contribute, we are open to new developers and pull requests. Please ensure that your work is of a high standard and properly documented. You can also contact any of the developers on Discord or Stoat to learn more about the current state of the emulator.
+Dravyn is derived from [Eglantine](https://github.com/diamond3500/Eglantine), Eden, Yuzu, and Sudachi. Original copyright and license notices are retained. See [LICENSE.txt](LICENSE.txt), [LICENSES](LICENSES), and individual file headers for applicable terms. It is an independent project, not affiliated with Nintendo.
 
-## Documentation
-
-We have a user manual! See our [User Handbook](./docs/user/README.md).
-
-## Building
-
-See the [General Build Guide](docs/Build.md)
-
-For information on provided development tooling, see the [Tools directory](./tools)
-
-## Download
-
-You can download the latest releases from [here](https://github.com/Djihads80/Eglantine/releases).
-
-## Support
-
-We currently do not take in any donations for the time being
-
-If you would prefer to support us in a different way, please join our [Discord](https://discord.gg/jCCZ58VExk)
-
-## License
-
-Eglantine is licensed under the GPLv3 (or any later version). Refer to the [LICENSE.txt](https://github.com/Djihads80/Eglantine/blob/nx2/LICENSE.txt) file.
+The macOS changes and interface were developed with AI assistance. Current build/package verification does not replace gameplay testing or human code review.

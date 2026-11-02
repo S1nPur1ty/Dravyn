@@ -746,7 +746,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="11">
-             <widget class="QPushButton" name="button_minus">
+             <widget class="UIControls::Button" name="button_minus">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -764,7 +764,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="11">
-             <widget class="QPushButton" name="button_apostrophe">
+             <widget class="UIControls::Button" name="button_apostrophe">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -782,7 +782,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="11">
-             <widget class="QPushButton" name="button_slash">
+             <widget class="UIControls::Button" name="button_slash">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -800,7 +800,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="11">
-             <widget class="QPushButton" name="button_exclamation">
+             <widget class="UIControls::Button" name="button_exclamation">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -818,7 +818,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="7">
-             <widget class="QPushButton" name="button_7">
+             <widget class="UIControls::Button" name="button_7">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -836,7 +836,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="8">
-             <widget class="QPushButton" name="button_8">
+             <widget class="UIControls::Button" name="button_8">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -854,7 +854,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="10">
-             <widget class="QPushButton" name="button_0">
+             <widget class="UIControls::Button" name="button_0">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -872,7 +872,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="9">
-             <widget class="QPushButton" name="button_9">
+             <widget class="UIControls::Button" name="button_9">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -890,7 +890,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="2">
-             <widget class="QPushButton" name="button_w">
+             <widget class="UIControls::Button" name="button_w">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -908,7 +908,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="4">
-             <widget class="QPushButton" name="button_r">
+             <widget class="UIControls::Button" name="button_r">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -926,7 +926,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="3">
-             <widget class="QPushButton" name="button_e">
+             <widget class="UIControls::Button" name="button_e">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -944,7 +944,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="1">
-             <widget class="QPushButton" name="button_q">
+             <widget class="UIControls::Button" name="button_q">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -962,7 +962,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="7">
-             <widget class="QPushButton" name="button_u">
+             <widget class="UIControls::Button" name="button_u">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -980,7 +980,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="6">
-             <widget class="QPushButton" name="button_y">
+             <widget class="UIControls::Button" name="button_y">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -998,7 +998,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="5">
-             <widget class="QPushButton" name="button_t">
+             <widget class="UIControls::Button" name="button_t">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1016,7 +1016,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="9">
-             <widget class="QPushButton" name="button_o">
+             <widget class="UIControls::Button" name="button_o">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1034,7 +1034,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="10">
-             <widget class="QPushButton" name="button_p">
+             <widget class="UIControls::Button" name="button_p">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1052,7 +1052,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="8">
-             <widget class="QPushButton" name="button_i">
+             <widget class="UIControls::Button" name="button_i">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1070,7 +1070,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QPushButton" name="button_a">
+             <widget class="UIControls::Button" name="button_a">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1088,7 +1088,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="2">
-             <widget class="QPushButton" name="button_s">
+             <widget class="UIControls::Button" name="button_s">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1106,7 +1106,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="3">
-             <widget class="QPushButton" name="button_d">
+             <widget class="UIControls::Button" name="button_d">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1124,7 +1124,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="4">
-             <widget class="QPushButton" name="button_f">
+             <widget class="UIControls::Button" name="button_f">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1142,7 +1142,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="6">
-             <widget class="QPushButton" name="button_h">
+             <widget class="UIControls::Button" name="button_h">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1160,7 +1160,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="7">
-             <widget class="QPushButton" name="button_j">
+             <widget class="UIControls::Button" name="button_j">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1178,7 +1178,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="5">
-             <widget class="QPushButton" name="button_g">
+             <widget class="UIControls::Button" name="button_g">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1196,7 +1196,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="8">
-             <widget class="QPushButton" name="button_k">
+             <widget class="UIControls::Button" name="button_k">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1214,7 +1214,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="9">
-             <widget class="QPushButton" name="button_l">
+             <widget class="UIControls::Button" name="button_l">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1232,7 +1232,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="10">
-             <widget class="QPushButton" name="button_colon">
+             <widget class="UIControls::Button" name="button_colon">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1250,7 +1250,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="12" rowspan="2">
-             <widget class="QPushButton" name="button_return">
+             <widget class="UIControls::Button" name="button_return">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1268,7 +1268,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="12" rowspan="2">
-             <widget class="QPushButton" name="button_ok">
+             <widget class="UIControls::Button" name="button_ok">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1286,7 +1286,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="1">
-             <widget class="QPushButton" name="button_z">
+             <widget class="UIControls::Button" name="button_z">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1304,7 +1304,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="3">
-             <widget class="QPushButton" name="button_c">
+             <widget class="UIControls::Button" name="button_c">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1322,7 +1322,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="2">
-             <widget class="QPushButton" name="button_x">
+             <widget class="UIControls::Button" name="button_x">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1340,7 +1340,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="4">
-             <widget class="QPushButton" name="button_v">
+             <widget class="UIControls::Button" name="button_v">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1358,7 +1358,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="7">
-             <widget class="QPushButton" name="button_m">
+             <widget class="UIControls::Button" name="button_m">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1376,7 +1376,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="8">
-             <widget class="QPushButton" name="button_comma">
+             <widget class="UIControls::Button" name="button_comma">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1394,7 +1394,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="6">
-             <widget class="QPushButton" name="button_n">
+             <widget class="UIControls::Button" name="button_n">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1412,7 +1412,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="5">
-             <widget class="QPushButton" name="button_b">
+             <widget class="UIControls::Button" name="button_b">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1430,7 +1430,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="5" column="1" colspan="2">
-             <widget class="QPushButton" name="button_shift">
+             <widget class="UIControls::Button" name="button_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1454,7 +1454,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="10">
-             <widget class="QPushButton" name="button_question">
+             <widget class="UIControls::Button" name="button_question">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1472,7 +1472,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="9">
-             <widget class="QPushButton" name="button_dot">
+             <widget class="UIControls::Button" name="button_dot">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1490,7 +1490,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QPushButton" name="button_1">
+             <widget class="UIControls::Button" name="button_1">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1508,7 +1508,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="3">
-             <widget class="QPushButton" name="button_3">
+             <widget class="UIControls::Button" name="button_3">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1526,7 +1526,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="4">
-             <widget class="QPushButton" name="button_4">
+             <widget class="UIControls::Button" name="button_4">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1544,7 +1544,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="2">
-             <widget class="QPushButton" name="button_2">
+             <widget class="UIControls::Button" name="button_2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1562,7 +1562,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="6">
-             <widget class="QPushButton" name="button_6">
+             <widget class="UIControls::Button" name="button_6">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1580,7 +1580,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="5">
-             <widget class="QPushButton" name="button_5">
+             <widget class="UIControls::Button" name="button_5">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1598,7 +1598,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="5" column="3" colspan="9">
-             <widget class="QPushButton" name="button_space">
+             <widget class="UIControls::Button" name="button_space">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1616,7 +1616,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="12">
-             <widget class="QPushButton" name="button_backspace">
+             <widget class="UIControls::Button" name="button_backspace">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1924,7 +1924,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="11">
-             <widget class="QPushButton" name="button_underscore">
+             <widget class="UIControls::Button" name="button_underscore">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1942,7 +1942,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="11">
-             <widget class="QPushButton" name="button_quotation">
+             <widget class="UIControls::Button" name="button_quotation">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1960,7 +1960,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="11">
-             <widget class="QPushButton" name="button_at">
+             <widget class="UIControls::Button" name="button_at">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1978,7 +1978,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="11">
-             <widget class="QPushButton" name="button_equal">
+             <widget class="UIControls::Button" name="button_equal">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -1996,7 +1996,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="7">
-             <widget class="QPushButton" name="button_ampersand">
+             <widget class="UIControls::Button" name="button_ampersand">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2014,7 +2014,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="8">
-             <widget class="QPushButton" name="button_asterisk">
+             <widget class="UIControls::Button" name="button_asterisk">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2032,7 +2032,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="10">
-             <widget class="QPushButton" name="button_right_parenthesis">
+             <widget class="UIControls::Button" name="button_right_parenthesis">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2050,7 +2050,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="9">
-             <widget class="QPushButton" name="button_left_parenthesis">
+             <widget class="UIControls::Button" name="button_left_parenthesis">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2068,7 +2068,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="2">
-             <widget class="QPushButton" name="button_w_shift">
+             <widget class="UIControls::Button" name="button_w_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2086,7 +2086,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="4">
-             <widget class="QPushButton" name="button_r_shift">
+             <widget class="UIControls::Button" name="button_r_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2104,7 +2104,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="3">
-             <widget class="QPushButton" name="button_e_shift">
+             <widget class="UIControls::Button" name="button_e_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2122,7 +2122,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="1">
-             <widget class="QPushButton" name="button_q_shift">
+             <widget class="UIControls::Button" name="button_q_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2140,7 +2140,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="7">
-             <widget class="QPushButton" name="button_u_shift">
+             <widget class="UIControls::Button" name="button_u_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2158,7 +2158,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="6">
-             <widget class="QPushButton" name="button_y_shift">
+             <widget class="UIControls::Button" name="button_y_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2176,7 +2176,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="5">
-             <widget class="QPushButton" name="button_t_shift">
+             <widget class="UIControls::Button" name="button_t_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2194,7 +2194,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="9">
-             <widget class="QPushButton" name="button_o_shift">
+             <widget class="UIControls::Button" name="button_o_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2212,7 +2212,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="10">
-             <widget class="QPushButton" name="button_p_shift">
+             <widget class="UIControls::Button" name="button_p_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2230,7 +2230,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="8">
-             <widget class="QPushButton" name="button_i_shift">
+             <widget class="UIControls::Button" name="button_i_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2248,7 +2248,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QPushButton" name="button_a_shift">
+             <widget class="UIControls::Button" name="button_a_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2266,7 +2266,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="2">
-             <widget class="QPushButton" name="button_s_shift">
+             <widget class="UIControls::Button" name="button_s_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2284,7 +2284,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="3">
-             <widget class="QPushButton" name="button_d_shift">
+             <widget class="UIControls::Button" name="button_d_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2302,7 +2302,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="4">
-             <widget class="QPushButton" name="button_f_shift">
+             <widget class="UIControls::Button" name="button_f_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2320,7 +2320,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="6">
-             <widget class="QPushButton" name="button_h_shift">
+             <widget class="UIControls::Button" name="button_h_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2338,7 +2338,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="7">
-             <widget class="QPushButton" name="button_j_shift">
+             <widget class="UIControls::Button" name="button_j_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2356,7 +2356,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="5">
-             <widget class="QPushButton" name="button_g_shift">
+             <widget class="UIControls::Button" name="button_g_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2374,7 +2374,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="8">
-             <widget class="QPushButton" name="button_k_shift">
+             <widget class="UIControls::Button" name="button_k_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2392,7 +2392,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="9">
-             <widget class="QPushButton" name="button_l_shift">
+             <widget class="UIControls::Button" name="button_l_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2410,7 +2410,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="10">
-             <widget class="QPushButton" name="button_semicolon">
+             <widget class="UIControls::Button" name="button_semicolon">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2428,7 +2428,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="12" rowspan="2">
-             <widget class="QPushButton" name="button_return_shift">
+             <widget class="UIControls::Button" name="button_return_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2446,7 +2446,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="12" rowspan="2">
-             <widget class="QPushButton" name="button_ok_shift">
+             <widget class="UIControls::Button" name="button_ok_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2464,7 +2464,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="1">
-             <widget class="QPushButton" name="button_z_shift">
+             <widget class="UIControls::Button" name="button_z_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2482,7 +2482,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="3">
-             <widget class="QPushButton" name="button_c_shift">
+             <widget class="UIControls::Button" name="button_c_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2500,7 +2500,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="2">
-             <widget class="QPushButton" name="button_x_shift">
+             <widget class="UIControls::Button" name="button_x_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2518,7 +2518,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="4">
-             <widget class="QPushButton" name="button_v_shift">
+             <widget class="UIControls::Button" name="button_v_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2536,7 +2536,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="7">
-             <widget class="QPushButton" name="button_m_shift">
+             <widget class="UIControls::Button" name="button_m_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2554,7 +2554,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="8">
-             <widget class="QPushButton" name="button_less_than">
+             <widget class="UIControls::Button" name="button_less_than">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2572,7 +2572,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="6">
-             <widget class="QPushButton" name="button_n_shift">
+             <widget class="UIControls::Button" name="button_n_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2590,7 +2590,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="5">
-             <widget class="QPushButton" name="button_b_shift">
+             <widget class="UIControls::Button" name="button_b_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2608,7 +2608,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="5" column="1" colspan="2">
-             <widget class="QPushButton" name="button_shift_shift">
+             <widget class="UIControls::Button" name="button_shift_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2632,7 +2632,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="10">
-             <widget class="QPushButton" name="button_plus">
+             <widget class="UIControls::Button" name="button_plus">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2650,7 +2650,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="9">
-             <widget class="QPushButton" name="button_greater_than">
+             <widget class="UIControls::Button" name="button_greater_than">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2668,7 +2668,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QPushButton" name="button_hash">
+             <widget class="UIControls::Button" name="button_hash">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2686,7 +2686,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="3">
-             <widget class="QPushButton" name="button_right_bracket">
+             <widget class="UIControls::Button" name="button_right_bracket">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2704,7 +2704,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="4">
-             <widget class="QPushButton" name="button_dollar">
+             <widget class="UIControls::Button" name="button_dollar">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2722,7 +2722,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="2">
-             <widget class="QPushButton" name="button_left_bracket">
+             <widget class="UIControls::Button" name="button_left_bracket">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2740,7 +2740,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="6">
-             <widget class="QPushButton" name="button_circumflex">
+             <widget class="UIControls::Button" name="button_circumflex">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2758,7 +2758,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="5">
-             <widget class="QPushButton" name="button_percent">
+             <widget class="UIControls::Button" name="button_percent">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2776,7 +2776,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="5" column="3" colspan="9">
-             <widget class="QPushButton" name="button_space_shift">
+             <widget class="UIControls::Button" name="button_space_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2794,7 +2794,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="12">
-             <widget class="QPushButton" name="button_backspace_shift">
+             <widget class="UIControls::Button" name="button_backspace_shift">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -2880,7 +2880,7 @@ p, li { white-space: pre-wrap; }
              <number>0</number>
             </property>
             <item row="1" column="5">
-             <widget class="QPushButton" name="button_backspace_num">
+             <widget class="UIControls::Button" name="button_backspace_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3137,7 +3137,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="4">
-             <widget class="QPushButton" name="button_6_num">
+             <widget class="UIControls::Button" name="button_6_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3155,7 +3155,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="2">
-             <widget class="QPushButton" name="button_4_num">
+             <widget class="UIControls::Button" name="button_4_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3173,7 +3173,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="4">
-             <widget class="QPushButton" name="button_9_num">
+             <widget class="UIControls::Button" name="button_9_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3191,7 +3191,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="3">
-             <widget class="QPushButton" name="button_5_num">
+             <widget class="UIControls::Button" name="button_5_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3209,7 +3209,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="2" column="5" rowspan="3">
-             <widget class="QPushButton" name="button_ok_num">
+             <widget class="UIControls::Button" name="button_ok_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3227,7 +3227,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="2">
-             <widget class="QPushButton" name="button_7_num">
+             <widget class="UIControls::Button" name="button_7_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3245,7 +3245,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="3">
-             <widget class="QPushButton" name="button_8_num">
+             <widget class="UIControls::Button" name="button_8_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3263,7 +3263,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="3">
-             <widget class="QPushButton" name="button_2_num">
+             <widget class="UIControls::Button" name="button_2_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3281,7 +3281,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="2">
-             <widget class="QPushButton" name="button_1_num">
+             <widget class="UIControls::Button" name="button_1_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3299,7 +3299,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="2">
-             <widget class="QPushButton" name="button_left_optional_num">
+             <widget class="UIControls::Button" name="button_left_optional_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3317,7 +3317,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="3">
-             <widget class="QPushButton" name="button_0_num">
+             <widget class="UIControls::Button" name="button_0_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3335,7 +3335,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="4" column="4">
-             <widget class="QPushButton" name="button_right_optional_num">
+             <widget class="UIControls::Button" name="button_right_optional_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3353,7 +3353,7 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="1" column="4">
-             <widget class="QPushButton" name="button_3_num">
+             <widget class="UIControls::Button" name="button_3_num">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
@@ -3534,6 +3534,13 @@ p, li { white-space: pre-wrap; }
   <tabstop>button_0_num</tabstop>
   <tabstop>button_right_optional_num</tabstop>
  </tabstops>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../dist/icons/overlay/overlay.qrc"/>
  </resources>

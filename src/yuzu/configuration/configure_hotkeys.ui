@@ -40,14 +40,14 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="button_clear_all">
+      <widget class="UIControls::Button" name="button_clear_all">
        <property name="text">
         <string>Clear All</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="button_restore_defaults">
+      <widget class="UIControls::Button" name="button_restore_defaults">
        <property name="text">
         <string>Restore Defaults</string>
        </property>
@@ -71,6 +71,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

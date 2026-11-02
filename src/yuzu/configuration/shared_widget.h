@@ -8,6 +8,8 @@
 
 #include <functional>
 #include <memory>
+#include <map>
+#include <QPointer>
 #include <string>
 #include <vector>
 #include <QObject>
@@ -171,12 +173,15 @@ public:
 
     const ComboboxTranslationMap& ComboboxTranslations() const;
 
+    Widget* FindWidget(const Settings::BasicSetting* setting) const;
+
 private:
     std::unique_ptr<TranslationMap> translations;
     std::unique_ptr<ComboboxTranslationMap> combobox_translations;
 
     QWidget* parent;
     const bool runtime_lock;
+    mutable std::map<const Settings::BasicSetting*, QPointer<Widget>> widgets;
 };
 
 } // namespace ConfigurationShared

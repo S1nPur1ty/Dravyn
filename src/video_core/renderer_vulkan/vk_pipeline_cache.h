@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include "video_core/draw_diagnostics.h"
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -115,6 +116,14 @@ public:
 
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipeline();
 
+    [[nodiscard]] VideoCommon::DrawFailure GraphicsFailure() const noexcept {
+        return graphics_failure;
+    }
+
+    [[nodiscard]] u64 GraphicsDiagnosticHash() const noexcept {
+        return graphics_failure == VideoCommon::DrawFailure::ShaderRejected ? 0 : graphics_key.Hash();
+    }
+
     [[nodiscard]] ComputePipeline* CurrentComputePipeline();
 
     void LoadDiskResources(u64 title_id, std::stop_token stop_loading,
@@ -123,7 +132,7 @@ public:
 private:
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipelineSlowPath();
 
-    [[nodiscard]] GraphicsPipeline* BuiltPipeline(GraphicsPipeline* pipeline) const noexcept;
+    [[nodiscard]] GraphicsPipeline* BuiltPipeline(GraphicsPipeline* pipeline) noexcept;
 
     std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline();
 
@@ -163,6 +172,7 @@ private:
 
     GraphicsPipelineCacheKey graphics_key{};
     GraphicsPipeline* current_pipeline{};
+    VideoCommon::DrawFailure graphics_failure{};
 
     ::Common::unordered_map<ComputePipelineCacheKey, std::unique_ptr<ComputePipeline>> compute_cache;
     ::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;

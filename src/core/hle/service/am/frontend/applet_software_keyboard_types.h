@@ -23,13 +23,14 @@ constexpr std::size_t MAX_GUIDE_TEXT_LENGTH = 256;
 constexpr std::size_t STRING_BUFFER_SIZE = 0x7D4;
 
 enum class SwkbdAppletVersion : u32_le {
-    Version5 = 0x5,          // 1.0.0
-    Version65542 = 0x10006,  // 2.0.0 - 2.3.0
-    Version196615 = 0x30007, // 3.0.0 - 3.0.2
-    Version262152 = 0x40008, // 4.0.0 - 4.1.0
-    Version327689 = 0x50009, // 5.0.0 - 5.1.0
-    Version393227 = 0x6000B, // 6.0.0 - 7.0.1
-    Version524301 = 0x8000D, // 8.0.0+
+    Version5 = 0x5,            // 1.0.0
+    Version65542 = 0x10006,    // 2.0.0 - 2.3.0
+    Version196615 = 0x30007,   // 3.0.0 - 3.0.2
+    Version262152 = 0x40008,   // 4.0.0 - 4.1.0
+    Version327689 = 0x50009,   // 5.0.0 - 5.1.0
+    Version393227 = 0x6000B,   // 6.0.0 - 7.0.1
+    Version524301 = 0x8000D,   // 8.0.0+
+    Version1310736 = 0x140010, // Switch 2
 };
 
 enum class SwkbdType : u32 {
@@ -183,6 +184,81 @@ struct SwkbdConfigNew {
 };
 static_assert(sizeof(SwkbdConfigNew) == 0x4C8 - sizeof(SwkbdConfigCommon),
               "SwkbdConfigNew has incorrect size.");
+// Switch 2 foreground keyboard configuration, revision 0x140010.
+struct SwkbdConfigNx2 {
+    SwkbdType type{};
+    std::array<char16_t, MAX_OK_TEXT_LENGTH + 1> ok_text{};
+    char16_t left_optional_symbol_key{};
+    char16_t right_optional_symbol_key{};
+    bool use_prediction{};
+    bool enable_return_button{};
+    SwkbdKeyDisableFlags key_disable_flags{};
+    SwkbdInitialCursorPosition initial_cursor_position{};
+    std::array<char16_t, MAX_HEADER_TEXT_LENGTH + 1> header_text{};
+    std::array<char16_t, MAX_SUB_TEXT_LENGTH + 1> sub_text{};
+    std::array<char16_t, MAX_GUIDE_TEXT_LENGTH + 1> guide_text{};
+    bool use_utf8{};
+    bool use_blur_background{};
+    u32 max_text_length{};
+    u32 min_text_length{};
+    SwkbdPasswordMode password_mode{};
+    SwkbdTextDrawType text_draw_type{};
+    u32 initial_string_offset{};
+    u32 initial_string_length{};
+    u32 user_dictionary_offset{};
+    u32 user_dictionary_entries{};
+    std::array<u64, 24> customized_dictionary_set_entries{};
+    u8 total_customized_dictionary_set_entries{};
+    bool use_text_check{};
+    bool disable_cancel_button{};
+    u8 trigger{};
+    std::array<u32, 8> text_grouping{};
+    INSERT_PADDING_BYTES(0x80);
+
+    SwkbdConfigCommon ToCommon() const {
+        return {
+            .type = type,
+            .ok_text = ok_text,
+            .left_optional_symbol_key = left_optional_symbol_key,
+            .right_optional_symbol_key = right_optional_symbol_key,
+            .use_prediction = use_prediction,
+            .key_disable_flags = key_disable_flags,
+            .initial_cursor_position = initial_cursor_position,
+            .header_text = header_text,
+            .sub_text = sub_text,
+            .guide_text = guide_text,
+            .max_text_length = max_text_length,
+            .min_text_length = min_text_length,
+            .password_mode = password_mode,
+            .text_draw_type = text_draw_type,
+            .enable_return_button = enable_return_button,
+            .use_utf8 = use_utf8,
+            .use_blur_background = use_blur_background,
+            .initial_string_offset = initial_string_offset,
+            .initial_string_length = initial_string_length,
+            .user_dictionary_offset = user_dictionary_offset,
+            .user_dictionary_entries = user_dictionary_entries,
+            .use_text_check = use_text_check,
+        };
+    }
+
+    SwkbdConfigNew ToNew() const {
+        return {
+            .text_grouping = text_grouping,
+            .customized_dictionary_set_entries = customized_dictionary_set_entries,
+            .total_customized_dictionary_set_entries = total_customized_dictionary_set_entries,
+            .disable_cancel_button = disable_cancel_button,
+        };
+    }
+};
+static_assert(sizeof(SwkbdConfigNx2) == 0x530);
+static_assert(offsetof(SwkbdConfigNx2, enable_return_button) == 0x1B);
+static_assert(offsetof(SwkbdConfigNx2, use_utf8) == 0x3AA);
+static_assert(offsetof(SwkbdConfigNx2, initial_string_offset) == 0x3BC);
+static_assert(offsetof(SwkbdConfigNx2, customized_dictionary_set_entries) == 0x3CC);
+static_assert(offsetof(SwkbdConfigNx2, use_text_check) == 0x48D);
+static_assert(offsetof(SwkbdConfigNx2, disable_cancel_button) == 0x48E);
+static_assert(offsetof(SwkbdConfigNx2, text_grouping) == 0x490);
 #pragma pack(pop)
 
 struct SwkbdTextCheck {

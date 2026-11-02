@@ -20,6 +20,9 @@
 ConfigureDebug::ConfigureDebug(const Core::System& system_, QWidget* parent)
     : QScrollArea(parent), ui{std::make_unique<Ui::ConfigureDebug>()}, system{system_} {
     ui->setupUi(this);
+    widget()->setAutoFillBackground(false);
+    viewport()->setAutoFillBackground(false);
+    setFrameShape(QFrame::NoFrame);
     SetConfiguration();
 
     connect(ui->open_log_button, &QPushButton::clicked, []() {

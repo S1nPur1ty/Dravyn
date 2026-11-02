@@ -23,6 +23,7 @@
 #include "common/settings_enums.h"
 #include "common/settings_input.h"
 #include "configuration/shared_widget.h"
+#include "configuration/style.h"
 #include "core/core.h"
 #include "core/file_sys/control_metadata.h"
 #include "core/file_sys/patch_manager.h"
@@ -74,6 +75,7 @@ ConfigurePerGame::ConfigurePerGame(QWidget* parent, u64 title_id_, const std::st
     applets_tab = std::make_unique<ConfigureApplets>(system_, tab_group, *builder, this);
 
     ui->setupUi(this);
+    ConfigurationShared::ApplyDialogStyle(this);
 
     ui->tabWidget->addTab(addons_tab.get(), tr("Add-Ons"));
     ui->tabWidget->addTab(system_tab.get(), tr("System"));
@@ -85,6 +87,16 @@ ConfigurePerGame::ConfigurePerGame(QWidget* parent, u64 title_id_, const std::st
     ui->tabWidget->addTab(input_tab.get(), tr("Input Profiles"));
     ui->tabWidget->addTab(network_tab.get(), tr("Network"));
     ui->tabWidget->addTab(applets_tab.get(), tr("Applets"));
+
+    for (int index = 0; index < ui->tabWidget->count(); ++index) {
+        auto* page = ui->tabWidget->widget(index);
+        const QString title = ui->tabWidget->tabText(index);
+        ui->tabWidget->removeTab(index);
+        ui->tabWidget->insertTab(index,
+                                ConfigurationShared::CreateScrollablePage(page, ui->tabWidget),
+                                title);
+    }
+    ui->tabWidget->setCurrentIndex(0);
 
     setFocusPolicy(Qt::ClickFocus);
     setWindowTitle(tr("Properties"));

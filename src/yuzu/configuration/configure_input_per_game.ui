@@ -51,7 +51,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_1">
+            <widget class="UIControls::ComboBox" name="profile_player_1">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -86,7 +86,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_2">
+            <widget class="UIControls::ComboBox" name="profile_player_2">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -121,7 +121,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_3">
+            <widget class="UIControls::ComboBox" name="profile_player_3">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -156,7 +156,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_4">
+            <widget class="UIControls::ComboBox" name="profile_player_4">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -191,7 +191,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_5">
+            <widget class="UIControls::ComboBox" name="profile_player_5">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -226,7 +226,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_6">
+            <widget class="UIControls::ComboBox" name="profile_player_6">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -261,7 +261,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_7">
+            <widget class="UIControls::ComboBox" name="profile_player_7">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -296,7 +296,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="profile_player_8">
+            <widget class="UIControls::ComboBox" name="profile_player_8">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -328,6 +328,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

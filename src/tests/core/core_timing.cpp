@@ -270,3 +270,14 @@ TEST_CASE("CoreTiming[BasicOrderNoPausing]", "[core]") {
     printf("HostTimer No Pausing Timer Time: %.3f %.6f\n", timer_time / 1000.f,
            timer_time / 1000000.f);
 }
+
+TEST_CASE("Presentation wait never returns before its deadline", "[normal-speed]") {
+    using namespace Service::Nx2Timing;
+    using Clock = std::chrono::steady_clock;
+    for (const auto delay : {std::chrono::microseconds{-1}, std::chrono::microseconds{100},
+                             std::chrono::microseconds{2000}}) {
+        const auto deadline = Clock::now() + delay;
+        WaitForPresentDeadline(deadline);
+        REQUIRE(Clock::now() >= deadline);
+    }
+}

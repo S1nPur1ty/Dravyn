@@ -17,6 +17,7 @@
 #include "common/literals.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 #include "video_core/renderer_vulkan/vk_staging_buffer_pool.h"
+#include "video_core/texture_cache/upload_batch.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
 
@@ -105,6 +106,25 @@ StagingBufferRef StagingBufferPool::Request(size_t size, MemoryUsage usage, bool
         return GetStreamBuffer(size);
     }
     return GetStagingBuffer(size, usage, deferred);
+}
+
+StagingBufferRef StagingBufferPool::RequestStreamUpload(size_t size) {
+    ASSERT(size > 0 && size <= VideoCommon::TextureUploadChunkBytes);
+    auto& slot = stream_uploads[stream_upload_index];
+    scheduler.Wait(slot.tick);
+    if (!slot.buffer) {
+        // Deferred entries are excluded from ordinary pool reuse and garbage collection.
+        slot.buffer =
+            GetStagingBuffer(VideoCommon::TextureUploadChunkBytes, MemoryUsage::Upload, true);
+    }
+    auto result = *slot.buffer;
+    result.mapped_span = result.mapped_span.first(size);
+    return result;
+}
+
+void StagingBufferPool::CommitStreamUpload() {
+    stream_uploads[stream_upload_index].tick = scheduler.Flush();
+    stream_upload_index = (stream_upload_index + 1) % stream_uploads.size();
 }
 
 void StagingBufferPool::FreeDeferred(StagingBufferRef& ref) {

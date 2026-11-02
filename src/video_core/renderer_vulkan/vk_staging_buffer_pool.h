@@ -7,6 +7,7 @@
 #pragma once
 
 #include <climits>
+#include <optional>
 #include <vector>
 
 #include "common/common_types.h"
@@ -39,6 +40,10 @@ public:
 
     StagingBufferRef Request(size_t size, MemoryUsage usage, bool deferred = false);
     void FreeDeferred(StagingBufferRef& ref);
+
+    // Two dedicated slots, reused only after their submitted GPU work completes.
+    StagingBufferRef RequestStreamUpload(size_t size);
+    void CommitStreamUpload();
 
     [[nodiscard]] VkBuffer StreamBuf() const noexcept {
         return *stream_buffer;
@@ -122,6 +127,13 @@ private:
     StagingBuffersCache device_local_cache;
     StagingBuffersCache upload_cache;
     StagingBuffersCache download_cache;
+
+    struct StreamUploadSlot {
+        std::optional<StagingBufferRef> buffer;
+        u64 tick{};
+    };
+    std::array<StreamUploadSlot, 2> stream_uploads;
+    size_t stream_upload_index{};
 
     size_t current_delete_level = 0;
     u64 buffer_index = 0;

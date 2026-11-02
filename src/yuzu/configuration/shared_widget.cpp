@@ -4,6 +4,8 @@
 // SPDX-FileCopyrightText: Copyright 2023 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "yuzu/util/design_system.h"
+#include "yuzu/util/popup.h"
 #include "yuzu/configuration/shared_widget.h"
 
 #include <functional>
@@ -75,7 +77,7 @@ QPushButton* Widget::CreateRestoreGlobalButton(bool using_global, QWidget* paren
 
     QStyle* style = parent->style();
     QIcon* icon = new QIcon(style->standardIcon(QStyle::SP_LineEditClearButton));
-    QPushButton* restore_button = new QPushButton(*icon, QString(), parent);
+    QPushButton* restore_button = new UIControls::Button(*icon, QString(), parent);
     restore_button->setObjectName(QStringLiteral("RestoreButton%1").arg(restore_button_count));
     restore_button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
@@ -133,7 +135,9 @@ QWidget* Widget::CreateCombobox(std::function<std::string()>& serializer,
                                 const std::function<void()>& touch) {
     const auto type = setting.EnumIndex();
 
-    combobox = new QComboBox(this);
+    combobox = new UIControls::ComboBox(this);
+    combobox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    combobox->setMinimumContentsLength(12);
     combobox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 
     const ComboboxTranslations* enumeration{nullptr};
@@ -513,6 +517,7 @@ void Widget::SetupComponent(const QString& label, std::function<void()>& load_fu
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(12);
 
     if (other_setting == nullptr) {
         other_setting = setting.PairedSetting();
@@ -798,8 +803,17 @@ Widget* Builder::BuildWidget(Settings::BasicSetting* setting,
         return nullptr;
     }
 
-    return new Widget(setting, *translations, *combobox_translations, parent, runtime_lock,
-                      apply_funcs, request, managed, multiplier, other_setting, suffix);
+    auto* widget = new Widget(setting, *translations, *combobox_translations, parent, runtime_lock,
+                              apply_funcs, request, managed, multiplier, other_setting, suffix);
+    if (widget->Valid()) {
+        widgets[setting] = widget;
+    }
+    return widget;
+}
+
+Widget* Builder::FindWidget(const Settings::BasicSetting* setting) const {
+    const auto it = widgets.find(setting);
+    return it == widgets.end() ? nullptr : it->second.data();
 }
 
 Widget* Builder::BuildWidget(Settings::BasicSetting* setting,

@@ -18,14 +18,14 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="0">
-    <widget class="QPushButton" name="zip">
+    <widget class="UIControls::Button" name="zip">
      <property name="text">
       <string>Import Mod from ZIP</string>
      </property>
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QPushButton" name="folder">
+    <widget class="UIControls::Button" name="folder">
      <property name="text">
       <string>Import Mod from Folder</string>
      </property>
@@ -50,6 +50,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

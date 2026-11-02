@@ -1,3 +1,4 @@
+#include "yuzu/configuration/controller_artwork.h"
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -6,13 +7,59 @@
 
 #include <algorithm>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
+#include <QRadialGradient>
 #include <QTimer>
 
 #include "hid_core/frontend/emulated_controller.h"
 #include "yuzu/configuration/configure_input_player_widget.h"
 
+namespace {
+// Coordinates in the approved 1536 x 1024 illustration, shared by painting and hit testing.
+struct IllustratedControl {
+    int button;
+    QRectF bounds;
+    const char* name;
+    bool round;
+};
+
+const std::array illustrated_controls{
+    IllustratedControl{Settings::NativeButton::A, {1210, 403, 100, 100}, "A", true},
+    IllustratedControl{Settings::NativeButton::B, {1117, 492, 100, 100}, "B", true},
+    IllustratedControl{Settings::NativeButton::X, {1117, 311, 100, 100}, "X", true},
+    IllustratedControl{Settings::NativeButton::Y, {1020, 402, 100, 100}, "Y", true},
+    IllustratedControl{Settings::NativeButton::L, {252, 146, 235, 70}, "L", false},
+    IllustratedControl{Settings::NativeButton::R, {1048, 146, 235, 70}, "R", false},
+    IllustratedControl{Settings::NativeButton::ZL, {303, 65, 140, 75}, "ZL", false},
+    IllustratedControl{Settings::NativeButton::ZR, {1097, 65, 140, 75}, "ZR", false},
+    IllustratedControl{Settings::NativeButton::Minus, {612, 351, 68, 68}, "Minus", true},
+    IllustratedControl{Settings::NativeButton::Plus, {855, 351, 68, 68}, "Plus", true},
+    IllustratedControl{Settings::NativeButton::Home, {726, 429, 84, 84}, "Home", true},
+    IllustratedControl{Settings::NativeButton::DLeft, {473, 614, 70, 77}, "D-pad left", false},
+    IllustratedControl{Settings::NativeButton::DUp, {542, 551, 79, 70}, "D-pad up", false},
+    IllustratedControl{Settings::NativeButton::DRight, {620, 614, 70, 77}, "D-pad right", false},
+    IllustratedControl{Settings::NativeButton::DDown, {542, 689, 79, 65}, "D-pad down", false},
+    IllustratedControl{Settings::NativeButton::LStick, {278, 349, 200, 200}, "Left stick", true},
+    IllustratedControl{Settings::NativeButton::RStick, {886, 557, 200, 200}, "Right stick", true},
+};
+
+QPainterPath ControlShape(const IllustratedControl& control) {
+    QPainterPath path;
+    if (control.round) {
+        path.addEllipse(control.bounds);
+    } else {
+        path.addRoundedRect(control.bounds, 18, 18);
+    }
+    return path;
+}
+} // namespace
+
 PlayerControlPreview::PlayerControlPreview(QWidget* parent) : QFrame(parent) {
+    controller_illustration.load(QStringLiteral(":/controller/matte.png"));
+    setMouseTracking(true);
+    setMinimumSize(260, 320);
     is_controller_set = false;
     QTimer* timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, QOverload<>::of(&PlayerControlPreview::UpdateInput));
@@ -225,11 +272,100 @@ void PlayerControlPreview::UpdateInput() {
     }
 }
 
+QRectF PlayerControlPreview::IllustrationRect() const {
+    QSizeF size(1536, 1024);
+    size.scale(contentsRect().size(), Qt::KeepAspectRatio);
+    return QRectF(QPointF(contentsRect().center()) - QPointF(size.width(), size.height()) / 2,
+                  size);
+}
+
+int PlayerControlPreview::ControlAt(QPointF position) const {
+    if (controller_type != Core::HID::NpadStyleIndex::Fullkey) {
+        return -1;
+    }
+    const auto target = IllustrationRect();
+    const QPointF point = (position - target.topLeft()) * (1536.0 / target.width());
+    for (std::size_t i = 0; i < illustrated_controls.size(); ++i) {
+        if (ControlShape(illustrated_controls[i]).contains(point)) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+void PlayerControlPreview::mouseReleaseEvent(QMouseEvent* event) {
+    const int control = ControlAt(event->position());
+    if (event->button() == Qt::LeftButton && control >= 0 && !mapping_active) {
+        const int button = illustrated_controls[control].button;
+        if (button == Settings::NativeButton::LStick || button == Settings::NativeButton::RStick) {
+            emit StickClicked(button - Settings::NativeButton::LStick);
+        } else {
+            emit ButtonClicked(button);
+        }
+        event->accept();
+        return;
+    }
+    QFrame::mouseReleaseEvent(event);
+}
+
+void PlayerControlPreview::mouseMoveEvent(QMouseEvent* event) {
+    const int control = ControlAt(event->position());
+    if (control != hovered_control) {
+        hovered_control = control;
+        setCursor(control >= 0 ? Qt::PointingHandCursor : Qt::ArrowCursor);
+        setToolTip(control >= 0 ? tr(illustrated_controls[control].name) : QString{});
+        update();
+    }
+    QFrame::mouseMoveEvent(event);
+}
+
+void PlayerControlPreview::leaveEvent(QEvent* event) {
+    hovered_control = -1;
+    update();
+    QFrame::leaveEvent(event);
+}
+
+void PlayerControlPreview::DrawIllustration(QPainter& painter) {
+    const auto target = IllustrationRect();
+    painter.save();
+    painter.translate(target.topLeft());
+    painter.scale(target.width() / 1536, target.height() / 1024);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.drawPixmap(QRectF(0, 0, 1536, 1024), controller_illustration,
+                       controller_illustration.rect());
+    for (std::size_t i = 0; i < illustrated_controls.size(); ++i) {
+        const auto& control = illustrated_controls[i];
+        const bool pressed = button_values[control.button].value;
+        const bool hovered = static_cast<int>(i) == hovered_control;
+        if (pressed || hovered) {
+            painter.setPen(QPen(QColor(215, 211, 229, pressed ? 220 : 130), 3));
+            painter.setBrush(QColor(210, 205, 225, pressed ? 65 : 20));
+            painter.drawPath(ControlShape(control));
+        }
+    }
+    ConfigurationShared::DrawControllerSticks(
+        painter,
+        {QPointF(stick_values[0].x.value, stick_values[0].y.value),
+         QPointF(stick_values[1].x.value, stick_values[1].y.value)},
+        {button_values[Settings::NativeButton::LStick].value,
+         button_values[Settings::NativeButton::RStick].value});
+    painter.restore();
+}
+
 void PlayerControlPreview::paintEvent(QPaintEvent* event) {
     QFrame::paintEvent(event);
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    const QPointF center = rect().center();
+    if (controller_type == Core::HID::NpadStyleIndex::Fullkey &&
+        !controller_illustration.isNull()) {
+        DrawIllustration(p);
+        return;
+    }
+    // Keep the other controller diagrams usable in the compact canvas as well.
+    const qreal scale = std::min({width() / 520.0, height() / 350.0, 1.0});
+    p.translate(rect().center());
+    p.scale(scale, scale);
+    const QPointF center{};
 
     switch (controller_type) {
     case Core::HID::NpadStyleIndex::Handheld:

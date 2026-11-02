@@ -24,7 +24,12 @@
 #include "qt_common/util/game.h"
 
 class QVariantAnimation;
+class QComboBox;
+class QShowEvent;
+class QStackedLayout;
 
+class LoadingSpinner;
+class AnimatedIconButton;
 class GameCard;
 class GameListModel;
 class GameTree;
@@ -86,6 +91,8 @@ public:
     void UnloadController();
 
     void ResetViewMode();
+    void FinishWindowEntrance();
+    void PrepareForLaunch();
 
 public slots:
     void RefreshGameDirectory();
@@ -113,17 +120,23 @@ signals:
     void LinkToRyujinxRequested(const u64& program_id);
     void OpenDirectory(const QString& directory);
     void AddDirectory();
+    void RefreshRequested();
+    void SettingsRequested();
     void ShowList(bool show);
     void PopulatingCompleted();
     void SaveConfig();
 
 private slots:
     void OnTextChanged(const QString& new_text);
-    void OnFilterCloseClicked();
     void OnPopulatingCompleted(const QStringList& watch_list);
 
 private:
     void SetupViews();
+    void UpdateLibraryFolders();
+    void ChooseCover(const QModelIndex& index);
+    void ApplySort();
+    void AnimateGames();
+    void showEvent(QShowEvent* event) override;
     void SetupScrollAnimation();
     bool eventFilter(QObject* obj, QEvent* event) override;
     void changeEvent(QEvent*) override;
@@ -147,6 +160,17 @@ private:
     GameListSearchField* search_field = nullptr;
     MainWindow* main_window = nullptr;
     QVBoxLayout* layout = nullptr;
+    QLabel* empty_results = nullptr;
+    QPushButton* add_games = nullptr;
+    AnimatedIconButton* refresh_games = nullptr;
+    QComboBox* folder_filter = nullptr;
+    QComboBox* sort_order = nullptr;
+    bool window_entrance_complete = false;
+    bool library_ready = false;
+    bool games_shown = false;
+    QStackedLayout* content_stack = nullptr;
+    QWidget* loading_page = nullptr;
+    LoadingSpinner* loading_spinner = nullptr;
 
     GameTree* tree_view = nullptr;
     GameGrid* grid_view = nullptr;

@@ -308,7 +308,7 @@ std::unique_ptr<TranslationMap> InitializeTranslations(QObject* parent) {
            tr("This option allows to change the clock of the console.\n"
               "Can be used to manipulate time in games."));
     INSERT(Settings, custom_rtc_enabled, QString(), QString());
-    INSERT(Settings, custom_rtc_offset, QStringLiteral(" "),
+    INSERT(Settings, custom_rtc_offset, tr("Clock Offset (seconds)"),
            tr("The number of seconds from the current unix time"));
     INSERT(Settings, language_index, tr("Language:"),
            tr("This option can be overridden when region setting is auto-select"));

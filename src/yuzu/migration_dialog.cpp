@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "yuzu/util/design_system.h"
 #include "migration_dialog.h"
 
 #include <QApplication>
@@ -35,7 +36,7 @@ void MigrationDialog::addBox(QWidget* box) {
 }
 
 QAbstractButton* MigrationDialog::addButton(const QString& text, const bool reject) {
-    QAbstractButton* button = new QPushButton(this);
+    QAbstractButton* button = new UIControls::Button(this);
     button->setText(text);
     m_buttons->addWidget(button, 1);
 

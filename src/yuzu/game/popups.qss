@@ -1,0 +1,12 @@
+QMenu#StatusMenu {
+    background: #26262c; color: #eeeeF3; border: 1px solid #42424c; border-radius: 12px;
+}
+QMenu#StatusMenu { padding: 6px; font-size: 12px; }
+QMenu#StatusMenu::item { padding: 8px 18px; border-radius: 7px; }
+QMenu#StatusMenu::item:selected { background: #41414d; color: #ffffff; }
+QMenu#StatusMenu::item:disabled { color: #757582; }
+QMenu#StatusMenu::separator { height: 1px; background: #42424c; margin: 5px 10px; }
+QWidget#VolumePopup QSlider::groove:horizontal { height: 4px; background: #454550; border-radius: 2px; }
+QWidget#VolumePopup QSlider::sub-page:horizontal { background: #c4bedb; border-radius: 2px; }
+QWidget#VolumePopup QSlider::handle:horizontal { width: 14px; margin: -5px 0; border-radius: 7px; background: #f3f0fc; }
+QWidget#VolumePopup QSlider::handle:horizontal:hover { background: #ffffff; }

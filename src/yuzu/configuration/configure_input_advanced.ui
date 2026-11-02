@@ -183,7 +183,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player1_left_body_button">
+                            <widget class="UIControls::Button" name="player1_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -238,7 +238,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player1_left_buttons_button">
+                            <widget class="UIControls::Button" name="player1_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -314,7 +314,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player1_right_body_button">
+                            <widget class="UIControls::Button" name="player1_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -369,7 +369,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player1_right_buttons_button">
+                            <widget class="UIControls::Button" name="player1_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -469,7 +469,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player2_left_body_button">
+                            <widget class="UIControls::Button" name="player2_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -524,7 +524,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player2_left_buttons_button">
+                            <widget class="UIControls::Button" name="player2_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -600,7 +600,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player2_right_body_button">
+                            <widget class="UIControls::Button" name="player2_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -655,7 +655,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player2_right_buttons_button">
+                            <widget class="UIControls::Button" name="player2_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -773,7 +773,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player3_left_body_button">
+                            <widget class="UIControls::Button" name="player3_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -828,7 +828,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player3_left_buttons_button">
+                            <widget class="UIControls::Button" name="player3_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -904,7 +904,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player3_right_body_button">
+                            <widget class="UIControls::Button" name="player3_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -959,7 +959,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player3_right_buttons_button">
+                            <widget class="UIControls::Button" name="player3_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1059,7 +1059,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player4_left_body_button">
+                            <widget class="UIControls::Button" name="player4_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1114,7 +1114,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player4_left_buttons_button">
+                            <widget class="UIControls::Button" name="player4_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1190,7 +1190,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player4_right_body_button">
+                            <widget class="UIControls::Button" name="player4_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1245,7 +1245,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player4_right_buttons_button">
+                            <widget class="UIControls::Button" name="player4_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1384,7 +1384,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player5_left_body_button">
+                            <widget class="UIControls::Button" name="player5_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1439,7 +1439,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player5_left_buttons_button">
+                            <widget class="UIControls::Button" name="player5_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1515,7 +1515,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player5_right_body_button">
+                            <widget class="UIControls::Button" name="player5_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1570,7 +1570,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player5_right_buttons_button">
+                            <widget class="UIControls::Button" name="player5_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1670,7 +1670,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player6_left_body_button">
+                            <widget class="UIControls::Button" name="player6_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1725,7 +1725,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player6_left_buttons_button">
+                            <widget class="UIControls::Button" name="player6_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1801,7 +1801,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player6_right_body_button">
+                            <widget class="UIControls::Button" name="player6_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1856,7 +1856,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player6_right_buttons_button">
+                            <widget class="UIControls::Button" name="player6_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -1974,7 +1974,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player7_left_body_button">
+                            <widget class="UIControls::Button" name="player7_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2029,7 +2029,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player7_left_buttons_button">
+                            <widget class="UIControls::Button" name="player7_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2105,7 +2105,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player7_right_body_button">
+                            <widget class="UIControls::Button" name="player7_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2160,7 +2160,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player7_right_buttons_button">
+                            <widget class="UIControls::Button" name="player7_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2260,7 +2260,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player8_left_body_button">
+                            <widget class="UIControls::Button" name="player8_left_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2315,7 +2315,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player8_left_buttons_button">
+                            <widget class="UIControls::Button" name="player8_left_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2391,7 +2391,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player8_right_body_button">
+                            <widget class="UIControls::Button" name="player8_right_body_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2446,7 +2446,7 @@
                             <number>3</number>
                            </property>
                            <item>
-                            <widget class="QPushButton" name="player8_right_buttons_button">
+                            <widget class="UIControls::Button" name="player8_right_buttons_button">
                              <property name="sizePolicy">
                               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                                <horstretch>0</horstretch>
@@ -2583,7 +2583,7 @@
                 </spacer>
                </item>
                 <item row="2" column="2">
-                  <widget class="QPushButton" name="touchscreen_advanced">
+                  <widget class="UIControls::Button" name="touchscreen_advanced">
                     <property name="text">
                       <string>Advanced</string>
                     </property>
@@ -2597,7 +2597,7 @@
                 </widget>
                </item>
                <item row="3" column="2">
-                <widget class="QPushButton" name="debug_configure">
+                <widget class="UIControls::Button" name="debug_configure">
                  <property name="text">
                   <string>Configure</string>
                  </property>
@@ -2611,7 +2611,7 @@
                 </widget>
                </item>
                <item row="4" column="2">
-                <widget class="QPushButton" name="ring_controller_configure">
+                <widget class="UIControls::Button" name="ring_controller_configure">
                  <property name="text">
                   <string>Configure</string>
                  </property>
@@ -2625,7 +2625,7 @@
                 </widget>
                </item>
                <item row="5" column="2">
-                <widget class="QPushButton" name="camera_configure">
+                <widget class="UIControls::Button" name="camera_configure">
                  <property name="text">
                   <string>Configure</string>
                  </property>
@@ -2656,7 +2656,7 @@
                    <item row="2" column="0">
                      <widget class="QCheckBox" name="enable_raw_input">
                        <property name="toolTip">
-                         <string>Requires restarting Eglantine</string>
+                         <string>Requires restarting Dravyn</string>
                        </property>
                        <property name="minimumSize">
                          <size>
@@ -2698,7 +2698,7 @@
                    <item row="5" column="0">
                       <widget class="QCheckBox" name="enable_joycon_driver">
                        <property name="toolTip">
-                         <string>Requires restarting Eglantine</string>
+                         <string>Requires restarting Dravyn</string>
                        </property>
                        <property name="minimumSize">
                          <size>
@@ -2714,7 +2714,7 @@
                    <item row="6" column="0">
                       <widget class="QCheckBox" name="enable_procon_driver">
                        <property name="toolTip">
-                         <string>Requires restarting Eglantine</string>
+                         <string>Requires restarting Dravyn</string>
                        </property>
                        <property name="minimumSize">
                          <size>
@@ -2751,7 +2751,7 @@
                      </widget>
                    </item>
                    <item row="8" column="2">
-                     <widget class="QPushButton" name="buttonMotionTouch">
+                     <widget class="UIControls::Button" name="buttonMotionTouch">
                        <property name="text">
                          <string>Configure</string>
                        </property>
@@ -2831,6 +2831,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
  </resources>
  <connections/>

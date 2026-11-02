@@ -110,9 +110,9 @@
    </item>
    <item alignment="Qt::AlignVCenter">
     <widget class="QWidget" name="consoleInputSettings" native="true">
-     <layout class="QHBoxLayout" name="buttonsBottomRightHorizontalLayout">
+     <layout class="QGridLayout" name="consoleSettingsLayout">
       <property name="spacing">
-       <number>3</number>
+       <number>12</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -126,7 +126,7 @@
       <property name="bottomMargin">
        <number>0</number>
       </property>
-      <item alignment="Qt::AlignVCenter">
+      <item row="0" column="0">
        <widget class="QGroupBox" name="handheldGroup">
         <property name="maximumSize">
          <size>
@@ -173,7 +173,7 @@
         </layout>
        </widget>
       </item>
-      <item>
+      <item row="0" column="1">
        <widget class="QGroupBox" name="vibrationGroup">
         <property name="title">
          <string>Vibration</string>
@@ -195,22 +195,7 @@
           <number>3</number>
          </property>
          <item>
-          <widget class="QPushButton" name="vibrationButton">
-           <property name="minimumSize">
-            <size>
-             <width>68</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>68</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">min-width: 68px;</string>
-           </property>
+          <widget class="UIControls::Button" name="vibrationButton">
            <property name="text">
             <string>Configure</string>
            </property>
@@ -219,7 +204,7 @@
         </layout>
        </widget>
       </item>
-      <item>
+      <item row="0" column="2">
        <widget class="QGroupBox" name="motionGroup">
         <property name="title">
          <string>Motion</string>
@@ -241,22 +226,7 @@
           <number>3</number>
          </property>
          <item>
-          <widget class="QPushButton" name="motionButton">
-           <property name="minimumSize">
-            <size>
-             <width>68</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>68</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">min-width: 68px;</string>
-           </property>
+          <widget class="UIControls::Button" name="motionButton">
            <property name="text">
             <string>Configure</string>
            </property>
@@ -265,7 +235,7 @@
         </layout>
        </widget>
       </item>
-      <item alignment="Qt::AlignVCenter">
+      <item row="1" column="0" colspan="3">
        <widget class="QWidget" name="connectedControllers" native="true">
         <layout class="QGridLayout" name="gridLayout_2">
          <property name="leftMargin">
@@ -286,7 +256,7 @@
          <item row="1" column="2">
           <widget class="QCheckBox" name="checkboxPlayer2Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -300,21 +270,21 @@
          <item row="1" column="4">
           <widget class="QCheckBox" name="checkboxPlayer4Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
          <item row="1" column="3">
           <widget class="QCheckBox" name="checkboxPlayer3Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
          <item row="1" column="5">
           <widget class="QCheckBox" name="checkboxPlayer5Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -331,14 +301,14 @@
          <item row="1" column="7">
           <widget class="QCheckBox" name="checkboxPlayer7Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
          <item row="1" column="6">
           <widget class="QCheckBox" name="checkboxPlayer6Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -355,7 +325,7 @@
          <item row="1" column="8">
           <widget class="QCheckBox" name="checkboxPlayer8Connected">
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -439,38 +409,13 @@
         </layout>
        </widget>
       </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item alignment="Qt::AlignBottom">
-       <widget class="QPushButton" name="buttonRestoreDefaults">
+      <item row="2" column="1">
+       <widget class="UIControls::Button" name="buttonRestoreDefaults">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>68</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>68</width>
-          <height>16777215</height>
-         </size>
         </property>
         <property name="sizeIncrement">
          <size>
@@ -486,34 +431,19 @@
         </property>
         <property name="layoutDirection">
          <enum>Qt::LeftToRight</enum>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">min-width: 68px;</string>
         </property>
         <property name="text">
          <string>Defaults</string>
         </property>
        </widget>
       </item>
-      <item alignment="Qt::AlignBottom">
-       <widget class="QPushButton" name="buttonClearAll">
+      <item row="2" column="2">
+       <widget class="UIControls::Button" name="buttonClearAll">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>68</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>68</width>
-          <height>16777215</height>
-         </size>
         </property>
         <property name="sizeIncrement">
          <size>
@@ -529,9 +459,6 @@
         </property>
         <property name="layoutDirection">
          <enum>Qt::LeftToRight</enum>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">min-width: 68px;</string>
         </property>
         <property name="text">
          <string>Clear</string>
@@ -543,6 +470,13 @@
    </item>
   </layout>
  </widget>
- <resources/>
- <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
 </ui>

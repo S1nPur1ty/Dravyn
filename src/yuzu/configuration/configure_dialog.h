@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <QDialog>
+#include <QHash>
 #include "configuration/shared_widget.h"
 #include "qt_common/config/shared_translation.h"
 #include "qt_common/util/vk.h"
@@ -18,7 +19,16 @@ namespace Core {
 class System;
 }
 
+namespace ConfigurationShared {
+class ChangeTracker;
+}
+
+namespace UIAnimation {
+class PageTransition;
+}
+class ConfigureOverview;
 class ConfigureApplets;
+class QScrollArea;
 class ConfigureAudio;
 class ConfigureCpu;
 class ConfigureDebugTab;
@@ -66,6 +76,9 @@ signals:
 
 private:
     void changeEvent(QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void done(int result) override;
+    bool eventFilter(QObject* object, QEvent* event) override;
     void RetranslateUI();
 
     void HandleApplyButtonClicked();
@@ -80,7 +93,12 @@ private:
     Core::System& system;
     std::unique_ptr<ConfigurationShared::Builder> builder;
     std::vector<ConfigurationShared::Tab*> tab_group;
+    QHash<QWidget*, QScrollArea*> scroll_pages;
 
+    UIAnimation::PageTransition* transition{};
+    ConfigurationShared::ChangeTracker* changes{};
+    bool closing{};
+    std::unique_ptr<ConfigureOverview> overview_tab;
     std::unique_ptr<ConfigureApplets> applets_tab;
     std::unique_ptr<ConfigureAudio> audio_tab;
     std::unique_ptr<ConfigureCpu> cpu_tab;

@@ -191,9 +191,21 @@ void SoftwareKeyboard::InitializeForeground() {
     const auto& swkbd_config_data = swkbd_config_storage->GetData();
     ASSERT(swkbd_config_data.size() >= sizeof(SwkbdConfigCommon));
 
-    std::memcpy(&swkbd_config_common, swkbd_config_data.data(), sizeof(SwkbdConfigCommon));
+    if (swkbd_applet_version != SwkbdAppletVersion::Version1310736) {
+        std::memcpy(&swkbd_config_common, swkbd_config_data.data(), sizeof(SwkbdConfigCommon));
+    }
 
+    LOG_INFO(Service_AM, "Keyboard configuration: revision={:#x}, size={:#x}",
+             common_args.library_version, swkbd_config_data.size());
     switch (swkbd_applet_version) {
+    case SwkbdAppletVersion::Version1310736: {
+        ASSERT(swkbd_config_data.size() == sizeof(SwkbdConfigNx2));
+        SwkbdConfigNx2 config;
+        std::memcpy(&config, swkbd_config_data.data(), sizeof(config));
+        swkbd_config_common = config.ToCommon();
+        swkbd_config_new = config.ToNew();
+        break;
+    }
     case SwkbdAppletVersion::Version5:
     case SwkbdAppletVersion::Version65542:
         ASSERT(swkbd_config_data.size() == sizeof(SwkbdConfigCommon) + sizeof(SwkbdConfigOld));

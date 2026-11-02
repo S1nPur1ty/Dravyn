@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <utility>
 #include "common/assert.h"
 #include "common/fs/file.h"
@@ -232,29 +233,49 @@ bool RealVfsFilesystem::DeleteDirectory(std::string_view path_) {
     return FS::RemoveDirRecursively(path);
 }
 
-std::unique_lock<std::mutex> RealVfsFilesystem::RefreshReference(const std::string& path,
-                                                                 OpenMode perms,
-                                                                 FileReference& reference) {
-    std::unique_lock lk{list_lock};
-
-    // Temporarily remove from list.
-    this->RemoveReferenceFromListLocked(reference);
-
-    // Restore file if needed.
+RealVfsFilesystem::FileAccess::FileAccess(RealVfsFilesystem& owner_, const std::string& path,
+                                          OpenMode perms, FileReference& reference,
+                                          bool parallel_read)
+    : owner{owner_}, io_lock{reference.io_mutex, std::defer_lock},
+      read_lock{reference.io_mutex, std::defer_lock} {
+    if (parallel_read) {
+        read_lock.lock();
+    } else {
+        io_lock.lock();
+    }
+    std::unique_lock lk{owner.list_lock};
+    while (!reference.file && owner.num_open_files >= MaxOpenFiles() &&
+           !owner.EvictSingleReferenceLocked()) {
+        owner.file_available.wait(lk);
+    }
+    owner.RemoveReferenceFromListLocked(reference);
     if (!reference.file) {
-        this->EvictSingleReferenceLocked();
-
         reference.file =
             FS::FileOpen(path, ModeFlagsToFileAccessMode(perms), FS::FileType::BinaryFile);
         if (reference.file) {
-            num_open_files++;
+            ++owner.num_open_files;
         }
     }
+    owner.InsertReferenceIntoListLocked(reference);
+    file = reference.file.get();
+}
 
-    // Reinsert into list.
-    this->InsertReferenceIntoListLocked(reference);
+RealVfsFilesystem::FileAccess::~FileAccess() {
+    // Release the pin under the same mutex used by the capacity waiter.
+    std::scoped_lock lk{owner.list_lock};
+    if (io_lock.owns_lock()) {
+        io_lock.unlock();
+    } else {
+        read_lock.unlock();
+    }
+    owner.file_available.notify_one();
+}
 
-    return lk;
+RealVfsFilesystem::FileAccess RealVfsFilesystem::RefreshReference(const std::string& path,
+                                                                  OpenMode perms,
+                                                                  FileReference& reference,
+                                                                  bool parallel_read) {
+    return FileAccess{*this, path, perms, reference, parallel_read};
 }
 
 void RealVfsFilesystem::DropReference(std::unique_ptr<FileReference>&& reference) {
@@ -270,26 +291,26 @@ void RealVfsFilesystem::DropReference(std::unique_ptr<FileReference>&& reference
     if (reference->file) {
         reference->file.reset();
         num_open_files--;
+        file_available.notify_one();
     }
 }
 
-void RealVfsFilesystem::EvictSingleReferenceLocked() {
-    if (num_open_files < MaxOpenFiles() || open_references.empty()) {
-        return;
-    }
-
-    // Get and remove from list.
-    auto& reference = open_references.back();
-    this->RemoveReferenceFromListLocked(reference);
-
-    // Close the file.
-    if (reference.file) {
+bool RealVfsFilesystem::EvictSingleReferenceLocked() {
+    // A busy handle stays open until its I/O completes. Never wait on an individual
+    // file while holding list_lock: unrelated reads must be able to finish.
+    for (auto it = open_references.rbegin(); it != open_references.rend(); ++it) {
+        auto& reference = *it;
+        std::unique_lock io_lock{reference.io_mutex, std::try_to_lock};
+        if (!io_lock.owns_lock()) {
+            continue;
+        }
+        RemoveReferenceFromListLocked(reference);
         reference.file.reset();
-        num_open_files--;
+        --num_open_files;
+        InsertReferenceIntoListLocked(reference);
+        return true;
     }
-
-    // Reinsert into closed list.
-    this->InsertReferenceIntoListLocked(reference);
+    return false;
 }
 
 void RealVfsFilesystem::InsertReferenceIntoListLocked(FileReference& reference) {
@@ -329,17 +350,20 @@ std::string RealVfsFile::GetName() const {
 }
 
 std::size_t RealVfsFile::GetSize() const {
-    if (size) {
-        return *size;
+    {
+        std::scoped_lock lk{reference->io_mutex};
+        if (size) {
+            return *size;
+        }
     }
-    auto lk = base.RefreshReference(path, perms, *reference);
-    return reference->file ? reference->file->GetSize() : 0;
+    auto access = base.RefreshReference(path, perms, *reference);
+    return access ? access->GetSize() : 0;
 }
 
 bool RealVfsFile::Resize(std::size_t new_size) {
+    auto access = base.RefreshReference(path, perms, *reference);
     size.reset();
-    auto lk = base.RefreshReference(path, perms, *reference);
-    return reference->file ? reference->file->SetSize(new_size) : false;
+    return access ? access->SetSize(new_size) : false;
 }
 
 VirtualDir RealVfsFile::GetContainingDirectory() const {
@@ -355,20 +379,28 @@ bool RealVfsFile::IsReadable() const {
 }
 
 std::size_t RealVfsFile::Read(u8* data, std::size_t length, std::size_t offset) const {
-    auto lk = base.RefreshReference(path, perms, *reference);
-    if (!reference->file || !reference->file->Seek(static_cast<s64>(offset))) {
+#ifndef _WIN32
+    if (perms == OpenMode::Read) {
+        auto access = base.RefreshReference(path, perms, *reference, true);
+        return access ? access->ReadAt(std::span{data, length}, offset) : 0;
+    }
+#endif
+    auto access = base.RefreshReference(path, perms, *reference);
+    if (offset > static_cast<size_t>(std::numeric_limits<s64>::max()) || !access ||
+        !access->Seek(static_cast<s64>(offset))) {
         return 0;
     }
-    return reference->file->ReadSpan(std::span{data, length});
+    return access->ReadSpan(std::span{data, length});
 }
 
 std::size_t RealVfsFile::Write(const u8* data, std::size_t length, std::size_t offset) {
+    auto access = base.RefreshReference(path, perms, *reference);
     size.reset();
-    auto lk = base.RefreshReference(path, perms, *reference);
-    if (!reference->file || !reference->file->Seek(static_cast<s64>(offset))) {
+    if (offset > static_cast<size_t>(std::numeric_limits<s64>::max()) || !access ||
+        !access->Seek(static_cast<s64>(offset))) {
         return 0;
     }
-    return reference->file->WriteSpan(std::span{data, length});
+    return access->WriteSpan(std::span{data, length});
 }
 
 bool RealVfsFile::Rename(std::string_view name) {

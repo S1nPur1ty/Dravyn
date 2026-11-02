@@ -190,7 +190,7 @@
    <item>
     <layout class="QHBoxLayout">
      <item>
-      <widget class="QPushButton" name="default_button">
+      <widget class="UIControls::Button" name="default_button">
        <property name="text">
         <string>Default</string>
        </property>
@@ -207,6 +207,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

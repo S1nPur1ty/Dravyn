@@ -14,6 +14,7 @@
 #include "new_user_dialog.h"
 #include "qt_common/qt_common.h"
 #include "ui_new_user_dialog.h"
+#include "yuzu/configuration/style.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -66,8 +67,13 @@ void NewUserDialog::setup(Common::UUID uuid, const std::string& username, const 
     ui->setupUi(this);
 
     setWindowTitle(title);
+    ui->gridLayout_2->setContentsMargins(24, 24, 24, 24);
+    ui->gridLayout_2->setSpacing(18);
+    ui->gridLayout->setVerticalSpacing(10);
+    ConfigurationShared::ApplyDialogStyle(this);
 
-    m_scene = new QGraphicsScene;
+    m_scene = new QGraphicsScene(this);
+    ui->image->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
     ui->image->setScene(m_scene);
 
     // setup
@@ -300,7 +306,7 @@ std::vector<uint8_t> NewUserDialog::DecompressYaz0(const FileSys::VirtualFile& f
 void NewUserDialog::setImage(const QPixmap& pixmap) {
     m_pixmap = pixmap;
     m_scene->clear();
-    m_scene->addPixmap(m_pixmap);
+    m_scene->addPixmap(ConfigurationShared::RoundedAvatar(m_pixmap));
 }
 
 void NewUserDialog::revertImage() {
@@ -309,13 +315,7 @@ void NewUserDialog::revertImage() {
 }
 
 void NewUserDialog::updateRevertButton() {
-    if (isDefaultAvatar()) {
-        ui->revert->setIcon(QIcon{});
-    } else {
-        QStyle* style = parentWidget()->style();
-        QIcon icon(style->standardIcon(QStyle::SP_LineEditClearButton));
-        ui->revert->setIcon(icon);
-    }
+    ui->revert->setEnabled(!isDefaultAvatar());
 }
 
 void NewUserDialog::generateUUID() {

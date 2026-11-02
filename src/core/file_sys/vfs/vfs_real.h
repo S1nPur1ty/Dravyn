@@ -6,9 +6,11 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <map>
 #include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string_view>
 #include "common/intrusive_list.h"
 #include "core/file_sys/fs_filesystem.h"
@@ -22,6 +24,7 @@ namespace FileSys {
 
 struct FileReference : public Common::IntrusiveListBaseNode<FileReference> {
     std::shared_ptr<Common::FS::IOFile> file{};
+    std::shared_mutex io_mutex;
 };
 
 class RealVfsFile;
@@ -54,14 +57,35 @@ private:
     ReferenceListType open_references;
     ReferenceListType closed_references;
     std::mutex list_lock;
+    std::condition_variable file_available;
     size_t num_open_files{};
     // TODO: Workaround for improper dtor() ordering on clang + FreeBSD
     bool in_dtor = false;
 
 private:
     friend class RealVfsFile;
-    std::unique_lock<std::mutex> RefreshReference(const std::string& path, OpenMode perms,
-                                                  FileReference& reference);
+    class FileAccess {
+    public:
+        FileAccess(RealVfsFilesystem& owner, const std::string& path, OpenMode perms,
+                   FileReference& reference, bool parallel_read);
+        ~FileAccess();
+        FileAccess(const FileAccess&) = delete;
+        FileAccess& operator=(const FileAccess&) = delete;
+        explicit operator bool() const {
+            return file != nullptr;
+        }
+        Common::FS::IOFile* operator->() const {
+            return file;
+        }
+
+    private:
+        RealVfsFilesystem& owner;
+        std::unique_lock<std::shared_mutex> io_lock;
+        std::shared_lock<std::shared_mutex> read_lock;
+        Common::FS::IOFile* file{};
+    };
+    FileAccess RefreshReference(const std::string& path, OpenMode perms, FileReference& reference,
+                                bool parallel_read = false);
     void DropReference(std::unique_ptr<FileReference>&& reference);
 
 private:
@@ -71,7 +95,7 @@ private:
                                   OpenMode perms = OpenMode::Read);
 
 private:
-    void EvictSingleReferenceLocked();
+    bool EvictSingleReferenceLocked();
     void InsertReferenceIntoListLocked(FileReference& reference);
     void RemoveReferenceFromListLocked(FileReference& reference);
 };

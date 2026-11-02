@@ -55,6 +55,9 @@ public:
     /// Requests the worker to stop and blocks until processing has finished.
     void Stop();
 
+    /// Finish content registration, but cancel display-only work before launching a game.
+    void StopListing();
+
 public:
     /**
      * Synchronously processes any events queued by the worker.
@@ -94,6 +97,7 @@ private:
     std::condition_variable cv;
     std::deque<std::function<void(GameListModel*)>> queued_events;
     std::atomic_bool stop_requested = false;
+    std::atomic_bool stop_listing_requested = false;
     Common::Event processing_completed;
 
     Core::System& system;

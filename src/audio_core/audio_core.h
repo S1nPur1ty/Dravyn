@@ -10,6 +10,7 @@
 
 #include "audio_core/adsp/adsp.h"
 #include "audio_core/audio_manager.h"
+#include "audio_core/audio_out_manager.h"
 #include "audio_core/sink/sink.h"
 
 namespace Core {
@@ -35,6 +36,8 @@ public:
      * @return Ref to the audio manager.
      */
     AudioManager& GetAudioManager();
+
+    AudioOut::Manager& GetAudioOutManager();
 
     /**
      * Get the audio output sink currently in use.
@@ -66,6 +69,8 @@ private:
     std::unique_ptr<Sink::Sink> input_sink;
     /// The ADSP in the sysmodule
     std::optional<ADSP::ADSP> adsp;
+    /// Shared by all audio-output service sessions; outlives their IPC managers.
+    std::optional<AudioOut::Manager> audio_out_manager;
 };
 
 } // namespace AudioCore

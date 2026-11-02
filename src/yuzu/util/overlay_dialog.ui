@@ -118,7 +118,7 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QPushButton" name="button_cancel">
+              <widget class="UIControls::Button" name="button_cancel">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -136,7 +136,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="button_ok_label">
+              <widget class="UIControls::Button" name="button_ok_label">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -337,7 +337,7 @@ p, li { white-space: pre-wrap; }
               <number>0</number>
              </property>
              <item>
-              <widget class="QPushButton" name="button_cancel_rich">
+              <widget class="UIControls::Button" name="button_cancel_rich">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -355,7 +355,7 @@ p, li { white-space: pre-wrap; }
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="button_ok_rich">
+              <widget class="UIControls::Button" name="button_ok_rich">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -397,6 +397,13 @@ p, li { white-space: pre-wrap; }
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../dist/icons/overlay/overlay.qrc"/>
  </resources>

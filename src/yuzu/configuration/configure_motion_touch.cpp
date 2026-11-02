@@ -4,6 +4,7 @@
 // SPDX-FileCopyrightText: 2018 Citra Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "yuzu/util/design_system.h"
 #include <sstream>
 
 #include <QCloseEvent>
@@ -17,6 +18,7 @@
 #include "input_common/main.h"
 #include "ui_configure_motion_touch.h"
 #include "yuzu/configuration/configure_motion_touch.h"
+#include "yuzu/configuration/style.h"
 #include "yuzu/configuration/configure_touch_from_button.h"
 
 CalibrationConfigurationDialog::CalibrationConfigurationDialog(QWidget* parent,
@@ -24,7 +26,7 @@ CalibrationConfigurationDialog::CalibrationConfigurationDialog(QWidget* parent,
     : QDialog(parent) {
     layout = new QVBoxLayout(this);
     status_label = new QLabel(tr("Communicating with the server..."));
-    cancel_button = new QPushButton(tr("Cancel"));
+    cancel_button = new UIControls::Button(tr("Cancel"));
     connect(cancel_button, &QPushButton::clicked, this, [this] {
         if (!completed) {
             job->Stop();
@@ -83,6 +85,7 @@ ConfigureMotionTouch::ConfigureMotionTouch(QWidget* parent,
     : QDialog(parent), input_subsystem{input_subsystem_},
       ui(std::make_unique<Ui::ConfigureMotionTouch>()) {
     ui->setupUi(this);
+    ConfigurationShared::ApplyDialogStyle(this);
     SetConfiguration();
     UpdateUiDisplay();
     ConnectEvents();
@@ -163,27 +166,27 @@ void ConfigureMotionTouch::OnUDPAddServer() {
     const int row = udp_server_list_model->rowCount();
 
     if (!ok) {
-        QMessageBox::warning(this, tr("Eglantine"), tr("Port number has invalid characters"));
+        QMessageBox::warning(this, tr("Dravyn"), tr("Port number has invalid characters"));
         return;
     }
     if (port_number < 0 || port_number > 65353) {
-        QMessageBox::warning(this, tr("Eglantine"), tr("Port has to be in range 0 and 65353"));
+        QMessageBox::warning(this, tr("Dravyn"), tr("Port has to be in range 0 and 65353"));
         return;
     }
     if (!re.match(server_text).hasMatch()) {
-        QMessageBox::warning(this, tr("Eglantine"), tr("IP address is not valid"));
+        QMessageBox::warning(this, tr("Dravyn"), tr("IP address is not valid"));
         return;
     }
     // Search for duplicates
     for (const auto& item : udp_server_list_model->stringList()) {
         if (item == server_string) {
-            QMessageBox::warning(this, tr("Eglantine"), tr("This UDP server already exists"));
+            QMessageBox::warning(this, tr("Dravyn"), tr("This UDP server already exists"));
             return;
         }
     }
     // Limit server count to 8
     if (row == 8) {
-        QMessageBox::warning(this, tr("Eglantine"), tr("Unable to add more than 8 servers"));
+        QMessageBox::warning(this, tr("Dravyn"), tr("Unable to add more than 8 servers"));
         return;
     }
 
@@ -277,7 +280,7 @@ void ConfigureMotionTouch::OnConfigureTouchFromButton() {
 
 bool ConfigureMotionTouch::CanCloseDialog() {
     if (udp_test_in_progress) {
-        QMessageBox::warning(this, tr("Eglantine"),
+        QMessageBox::warning(this, tr("Dravyn"),
                              tr("UDP Test or calibration configuration is in progress.<br>Please "
                                 "wait for them to finish."));
         return false;

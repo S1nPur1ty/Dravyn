@@ -1,0 +1,16 @@
+QWidget#GameLibrary { background: #18181b; color: #eeeef1; }
+QWidget#GameLibraryHeader { background: transparent; }
+QLabel { color: #eeeef1; background: transparent; }
+QLabel#LibraryBrand { font-size: 15px; font-weight: 600; }
+QAbstractItemView { background: #18181b; color: #eeeef1; border: none; }
+QWidget#LibrarySearch { background: #323238; border: 1px solid #323238; border-radius: 20px; }
+QToolButton#LibrarySearchButton { background: transparent; border: none; border-radius: 19px; }
+QLineEdit { background: transparent; color: #eeeef1; border: none; padding: 0; font-size: 13px; selection-background-color: #555564; }
+QPushButton#LibraryAdd { background: #323238; color: #d1d1d9; border: 1px solid #323238; border-radius: 20px; }
+QPushButton#LibraryAdd:hover, QToolButton#LibrarySearchButton:hover { background: #303036; }
+QPushButton#LibraryAdd:focus, QToolButton#LibrarySearchButton:focus { border: 1px solid #90909c; }
+QPushButton#LibraryDropdownArrow { background: transparent; border: none; padding: 0; margin: 0; }
+
+QPushButton#LibraryAdd:pressed { background: #3b3b45; border-color: #777383; }
+
+QComboBox { min-height: 28px; padding: 5px 40px 5px 16px; }

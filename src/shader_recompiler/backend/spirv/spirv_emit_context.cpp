@@ -371,7 +371,6 @@ Id CasFunction(EmitContext& ctx, Operation operation, Id value_type) {
 Id CasLoop(EmitContext& ctx, Operation operation, Id array_pointer, Id element_pointer,
            Id value_type, Id memory_type, spv::Scope scope) {
     const bool is_shared{scope == spv::Scope::Workgroup};
-    const bool is_struct{!is_shared || ctx.uses_explicit_workgroup_layout};
     const Id cas_func{CasFunction(ctx, operation, value_type)};
     const Id zero{ctx.u32_zero_value};
     const Id scope_id{ctx.Const(static_cast<u32>(scope))};
@@ -395,8 +394,8 @@ Id CasLoop(EmitContext& ctx, Operation operation, Id array_pointer, Id element_p
     ctx.OpBranch(continue_block);
 
     ctx.AddLabel(continue_block);
-    const Id word_pointer{is_struct ? ctx.OpAccessChain(element_pointer, base, zero, index)
-                                    : ctx.OpAccessChain(element_pointer, base, index)};
+    const Id word_pointer{is_shared ? ctx.SharedU32Pointer(index)
+                                   : ctx.OpAccessChain(element_pointer, base, zero, index)};
     if (value_type.value == ctx.F32[2].value) {
         const Id u32_value{ctx.OpLoad(ctx.U32[1], word_pointer)};
         const Id value{ctx.OpUnpackHalf2x16(ctx.F32[2], u32_value)};
@@ -476,8 +475,10 @@ EmitContext::EmitContext(const Profile& profile_, const RuntimeInfo& runtime_inf
     DefineCommonConstants();
     DefineInterfaces(program);
     DefineLocalMemory(program);
-    DefineSharedMemory(program);
-    DefineSharedMemoryFunctions(program);
+    if (!program.info.shared_memory_storage_size) {
+        DefineSharedMemory(program, storage_binding);
+        DefineSharedMemoryFunctions(program);
+    }
     DefineConstantBuffers(program.info, uniform_binding);
     DefineConstantBufferIndirectFunctions(program.info);
     DefineStorageBuffers(program.info, storage_binding);
@@ -485,6 +486,10 @@ EmitContext::EmitContext(const Profile& profile_, const RuntimeInfo& runtime_inf
     DefineImageBuffers(program.info, image_binding);
     DefineTextures(program.info, texture_binding, bindings.texture_scaling_index);
     DefineImages(program.info, image_binding, bindings.image_scaling_index);
+    if (program.info.shared_memory_storage_size) {
+        DefineSharedMemory(program, storage_binding);
+        DefineSharedMemoryFunctions(program);
+    }
     DefineAttributeMemAccess(program.info);
     DefineWriteStorageCasLoopFunction(program.info);
     DefineGlobalMemoryFunctions(program.info);
@@ -600,9 +605,31 @@ void EmitContext::DefineLocalMemory(const IR::Program& program) {
     }
 }
 
-void EmitContext::DefineSharedMemory(const IR::Program& program) {
+Id EmitContext::SharedU32Pointer(Id word_index) {
+    if (shared_memory_storage_size) {
+        const Id group{OpLoad(U32[3], workgroup_id)};
+        const Id count{OpLoad(U32[3], num_workgroups)};
+        const Id x{OpCompositeExtract(U32[1], group, 0)};
+        const Id y{OpCompositeExtract(U32[1], group, 1)};
+        const Id z{OpCompositeExtract(U32[1], group, 2)};
+        const Id nx{OpCompositeExtract(U32[1], count, 0)};
+        const Id ny{OpCompositeExtract(U32[1], count, 1)};
+        const Id row{OpIAdd(U32[1], OpIMul(U32[1], z, ny), y)};
+        const Id linear{OpIAdd(U32[1], OpIMul(U32[1], row, nx), x)};
+        const Id base{OpIMul(U32[1], linear, Const(shared_memory_storage_size / 4))};
+        return OpAccessChain(shared_u32, shared_memory_u32, u32_zero_value,
+                             OpIAdd(U32[1], base, word_index));
+    }
+    if (uses_explicit_workgroup_layout) {
+        return OpAccessChain(shared_u32, shared_memory_u32, u32_zero_value, word_index);
+    }
+    return OpAccessChain(shared_u32, shared_memory_u32, word_index);
+}
+
+void EmitContext::DefineSharedMemory(const IR::Program& program, u32& binding) {
+    shared_memory_storage_size = program.info.shared_memory_storage_size;
     uses_explicit_workgroup_layout =
-        profile.support_explicit_workgroup_layout &&
+        !shared_memory_storage_size && profile.support_explicit_workgroup_layout &&
         (!program.info.uses_int8 || profile.support_workgroup_layout_8bit_access) &&
         (!program.info.uses_int16 || profile.support_workgroup_layout_16bit_access);
     if (program.shared_memory_size == 0) {
@@ -644,13 +671,24 @@ void EmitContext::DefineSharedMemory(const IR::Program& program) {
         std::tie(shared_memory_u32x4, shared_u32x4, std::ignore) = make(U32[4], 16);
         return;
     }
-    const u32 num_elements{Common::DivCeil(program.shared_memory_size, 4U)};
-    const Id type{TypeArray(U32[1], Const(num_elements))};
-    shared_memory_u32_type = TypePointer(spv::StorageClass::Workgroup, type);
-
-    shared_u32 = TypePointer(spv::StorageClass::Workgroup, U32[1]);
-    shared_memory_u32 = AddGlobalVariable(shared_memory_u32_type, spv::StorageClass::Workgroup);
-    interfaces.push_back(shared_memory_u32);
+    if (shared_memory_storage_size) {
+        shared_memory_u32_type = storage_types.U32.array;
+        shared_u32 = storage_types.U32.element;
+        shared_memory_u32 = AddGlobalVariable(shared_memory_u32_type, spv::StorageClass::StorageBuffer);
+        Decorate(shared_memory_u32, spv::Decoration::DescriptorSet, 0U);
+        Decorate(shared_memory_u32, spv::Decoration::Binding, binding++);
+        Name(shared_memory_u32, "shared_memory_storage");
+        if (profile.supported_spirv >= 0x00010400) {
+            interfaces.push_back(shared_memory_u32);
+        }
+    } else {
+        const u32 num_elements{Common::DivCeil(program.shared_memory_size, 4U)};
+        const Id type{TypeArray(U32[1], Const(num_elements))};
+        shared_memory_u32_type = TypePointer(spv::StorageClass::Workgroup, type);
+        shared_u32 = TypePointer(spv::StorageClass::Workgroup, U32[1]);
+        shared_memory_u32 = AddGlobalVariable(shared_memory_u32_type, spv::StorageClass::Workgroup);
+        interfaces.push_back(shared_memory_u32);
+    }
 
     const Id func_type{TypeFunction(void_id, U32[1], U32[1])};
     const auto make_function{[&](u32 mask, u32 size) {
@@ -673,7 +711,7 @@ void EmitContext::DefineSharedMemory(const IR::Program& program) {
         OpBranch(continue_block);
 
         AddLabel(continue_block);
-        const Id word_pointer{OpAccessChain(shared_u32, shared_memory_u32, word_offset)};
+        const Id word_pointer{SharedU32Pointer(word_offset)};
         const Id old_value{OpLoad(U32[1], word_pointer)};
         const Id new_value{OpBitFieldInsert(U32[1], old_value, insert_value, bit_offset, count)};
         const Id atomic_res{OpAtomicCompareExchange(U32[1], word_pointer, Const(1U), u32_zero_value,
@@ -1229,7 +1267,7 @@ void EmitContext::DefineConstantBufferIndirectFunctions(const Info& info) {
 }
 
 void EmitContext::DefineStorageBuffers(const Info& info, u32& binding) {
-    if (info.storage_buffers_descriptors.empty()) {
+    if (info.storage_buffers_descriptors.empty() && !info.shared_memory_storage_size) {
         return;
     }
     AddExtension("SPV_KHR_storage_buffer_storage_class");
@@ -1433,8 +1471,11 @@ void EmitContext::DefineInputs(const IR::Program& program) {
     const Info& info{program.info};
     const VaryingState loads{info.loads.mask | info.passthrough.mask};
 
-    if (info.uses_workgroup_id) {
+    if (info.uses_workgroup_id || info.shared_memory_storage_size) {
         workgroup_id = DefineInput(*this, U32[3], false, spv::BuiltIn::WorkgroupId);
+    }
+    if (info.shared_memory_storage_size) {
+        num_workgroups = DefineInput(*this, U32[3], false, spv::BuiltIn::NumWorkgroups);
     }
     if (info.uses_local_invocation_id) {
         local_invocation_id = DefineInput(*this, U32[3], false, spv::BuiltIn::LocalInvocationId);

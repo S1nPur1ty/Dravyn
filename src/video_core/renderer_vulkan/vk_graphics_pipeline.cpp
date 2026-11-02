@@ -321,7 +321,7 @@ GraphicsPipeline::GraphicsPipeline(
             LOG_CRITICAL(Render_Vulkan, "Graphics pipeline build failed: {}", exception.what());
             std::scoped_lock lock{build_mutex};
             is_built = true;
-            build_condvar.notify_one();
+            build_condvar.notify_all();
             if (shader_notify) {
                 shader_notify->MarkShaderComplete();
             }
@@ -333,7 +333,7 @@ GraphicsPipeline::GraphicsPipeline(
 
         std::scoped_lock lock{build_mutex};
         is_built = true;
-        build_condvar.notify_one();
+        build_condvar.notify_all();
         if (shader_notify) {
             shader_notify->MarkShaderComplete();
         }
@@ -599,8 +599,17 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     return ConfigureDraw(rescaling, render_area);
 }
 
+void GraphicsPipeline::WaitForBuild() {
+    if (IsBuilt()) return;
+    std::unique_lock lock{build_mutex};
+    build_condvar.wait(lock, [this] { return IsBuilt(); });
+}
+
 bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                                      const RenderAreaPushConstant& render_area) {
+    // Retain failed-build protection after the asynchronous draw-selection heuristic.
+    WaitForBuild();
+    if (!pipeline) return false;
     const void* const descriptor_data{guest_descriptor_queue.UpdateData()};
 
     VkDeviceSize descriptor_buffer_offset{};
@@ -634,13 +643,6 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     }
 
     scheduler.RequestRenderpass(texture_cache.GetFramebuffer());
-    if (!is_built.load(std::memory_order::relaxed)) {
-        // Wait for the pipeline to be built
-        scheduler.Record([this](vk::CommandBuffer) {
-            std::unique_lock lock{build_mutex};
-            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
-        });
-    }
     const bool is_rescaling{texture_cache.IsRescaling()};
     const bool update_rescaling{scheduler.UpdateRescaling(is_rescaling)};
     const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};
@@ -917,7 +919,8 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         provoking_vertex.pNext = std::exchange(rasterization_ci.pNext, &provoking_vertex);
     }
 
-    const bool supports_alpha_output = fragment_has_color0_output;
+    const bool supports_alpha_output = fragment_has_color0_output &&
+        !VideoCore::Surface::IsPixelFormatInteger(DecodeFormat(key.state.color_formats[0]));
     const bool alpha_to_one_supported = device.SupportsAlphaToOne();
     const VkPipelineMultisampleStateCreateInfo multisample_ci{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
@@ -967,7 +970,8 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             write_mask |= mask[i] ? mask_table[i] : 0;
         }
         cb_attachments.push_back({
-            .blendEnable = blend.enable != 0,
+            .blendEnable = blend.enable != 0 &&
+                !VideoCore::Surface::IsPixelFormatInteger(DecodeFormat(key.state.color_formats[index])),
             .srcColorBlendFactor = MaxwellToVK::BlendFactor(blend.SourceRGBFactor()),
             .dstColorBlendFactor = MaxwellToVK::BlendFactor(blend.DestRGBFactor()),
             .colorBlendOp = MaxwellToVK::BlendEquation(blend.EquationRGB()),

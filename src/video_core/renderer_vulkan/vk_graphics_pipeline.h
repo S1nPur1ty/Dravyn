@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <memory>
+#include <span>
 #include <type_traits>
 #include <vector>
 
@@ -117,6 +118,10 @@ public:
         return configure_func(this, is_indexed);
     }
 
+    [[nodiscard]] std::span<const VideoCommon::ImageViewInOut> DrawImageViews() const {
+        return {draw_views.data(), draw_views.size()};
+    }
+
     [[nodiscard]] GraphicsPipeline* Next(const GraphicsPipelineCacheKey& current_key) noexcept {
         if (key == current_key) {
             return this;
@@ -126,8 +131,14 @@ public:
                                            : nullptr;
     }
 
+    void WaitForBuild();
+
     [[nodiscard]] bool IsBuilt() const noexcept {
-        return is_built.load(std::memory_order::relaxed);
+        return is_built.load(std::memory_order_acquire);
+    }
+
+    [[nodiscard]] bool IsValid() const noexcept {
+        return IsBuilt() && static_cast<bool>(pipeline);
     }
 
     template <typename Spec>

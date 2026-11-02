@@ -12,8 +12,10 @@ Out::Out(Core::System& system_, Manager& manager_, Kernel::KEvent* event_, size_
                                                                             session_id_} {}
 
 void Out::Free() {
-    std::scoped_lock l{parent_mutex};
     manager.ReleaseSessionId(system.GetSessionId());
+    // No manager callback can reach this session now. Do not hold its mutex while
+    // finalization waits for the timing callback to finish.
+    system.Finalize();
 }
 
 System& Out::GetSystem() {

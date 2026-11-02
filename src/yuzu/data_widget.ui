@@ -53,7 +53,7 @@
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QPushButton" name="open">
+      <widget class="UIControls::Button" name="open">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>1</horstretch>
@@ -89,7 +89,7 @@ min-height: 45px;
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="clear">
+      <widget class="UIControls::Button" name="clear">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>1</horstretch>
@@ -125,7 +125,7 @@ min-height: 45px;
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="upload">
+      <widget class="UIControls::Button" name="upload">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>1</horstretch>
@@ -161,7 +161,7 @@ min-height: 45px;
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="download">
+      <widget class="UIControls::Button" name="download">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>1</horstretch>
@@ -200,6 +200,13 @@ min-height: 45px;
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

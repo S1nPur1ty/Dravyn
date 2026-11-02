@@ -33,6 +33,7 @@ class QByteArray;
 class QGraphicsOpacityEffect;
 class QMovie;
 class QPropertyAnimation;
+class QTimer;
 
 class LoadingScreen : public QWidget {
     Q_OBJECT
@@ -79,17 +80,15 @@ private:
     QGraphicsOpacityEffect* opacity_effect = nullptr;
     std::unique_ptr<QPropertyAnimation> fadeout_animation;
 
-    // Definitions for the differences in text and styling for each stage
-    ::Common::unordered_map<VideoCore::LoadCallbackStage, const char*> progressbar_style;
+    // Descriptions for each loading stage.
     ::Common::unordered_map<VideoCore::LoadCallbackStage, QString> stage_translations;
 
-    // newly generated shaders are added to the end of the file, so when loading and compiling
-    // shaders, it will start quickly but end slow if new shaders were added since previous launch.
-    // These variables are used to detect the change in speed so we can generate an ETA
-    bool slow_shader_compile_start = false;
-    std::chrono::steady_clock::time_point slow_shader_start;
-    std::chrono::steady_clock::time_point previous_time;
-    std::size_t slow_shader_first_value = 0;
+    void UpdateElapsedTime();
+    QTimer* progress_timer = nullptr;
+    std::chrono::steady_clock::time_point stage_start;
+    std::size_t previous_value = 0;
+    std::size_t stage_first_value = 0;
+
 };
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

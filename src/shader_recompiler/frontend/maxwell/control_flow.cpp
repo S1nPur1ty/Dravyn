@@ -433,8 +433,7 @@ CFG::AnalysisState CFG::AnalyzeBRX(Block* block, Location pc, Instruction inst, 
                                    FunctionId function_id) {
     const std::optional brx_table{TrackIndirectBranchTable(env, pc, program_start)};
     if (!brx_table) {
-        TrackIndirectBranchTable(env, pc, program_start);
-        throw NotImplementedException("Failed to track indirect branch");
+        throw NotImplementedException("Failed to track indirect branch at {}", pc);
     }
     const IR::FlowTest flow_test{inst.branch.flow_test};
     const Predicate pred{inst.Pred()};

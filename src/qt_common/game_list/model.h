@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <QFileSystemWatcher>
 #include <QStandardItemModel>
 #include <QStringList>
@@ -49,10 +50,15 @@ public:
     void AddEntry(const QList<QStandardItem*>& entry_items, GameListDir* parent);
     void DonePopulating(const QStringList& watch_list);
 
+    void RestoreSnapshot(const QVector<UISettings::GameDir>& game_dirs);
     void PopulateAsync(QVector<UISettings::GameDir>& game_dirs);
-    void WorkerEvent();
+
+    void PrepareForLaunch();
 
     bool IsEmpty() const;
+    bool IsPopulating() const {
+        return populating;
+    }
 
     void ToggleFavorite(u64 program_id);
 
@@ -67,6 +73,7 @@ public:
     void SetFlat(bool flat);
 
 signals:
+    void SnapshotAvailable();
     void ShowList(bool show);
     void PopulatingCompleted(const QStringList& watch_list);
     void PopulatingStarted();
@@ -79,8 +86,14 @@ private:
     void RemoveFavorite(u64 program_id);
     void Repopulate();
     void StopWorker();
+    void SaveSnapshot();
+    void ReconcileEntries();
 
     bool m_flat = false;
+    bool populating = false;
+    bool snapshot_attempted = false;
+    QStandardItemModel pending_entries;
+    QVector<UISettings::GameDir> snapshot_directories;
 
     std::shared_ptr<FileSys::VfsFilesystem> vfs;
     FileSys::ManualContentProvider* provider;
@@ -88,6 +101,7 @@ private:
     Core::System& system;
 
     std::unique_ptr<GameListWorker> current_worker;
+    std::vector<std::unique_ptr<GameListDir>> flat_directories;
     QFileSystemWatcher* watcher = nullptr;
     QFileSystemWatcher* external_watcher = nullptr;
 };

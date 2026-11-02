@@ -1088,11 +1088,17 @@ private:
             LOG_DEBUG(Service, "nx2:vi2 present #{} fence ({}, {:#x}), waiting for ({}, {:#x}); now {:#x}",
                       m_presents, ~w[22], w[24], m_previous_fence_id, m_previous_fence_value,
                       ~w[22] < 192 ? system.Host1x().GetSyncpointManager().GetGuestSyncpointValue(~w[22]) : 0U);
-            WaitForFrame(m_previous_fence_id, m_previous_fence_value);
+            if (!WaitForFrame(m_previous_fence_id, m_previous_fence_value)) {
+                TipcReplyWords(ctx, {0, 0, 0, 0, 0, 0});
+                return;
+            }
             m_previous_fence_id = ~w[22];
             m_previous_fence_value = w[24];
         } else {
-            WaitForFrame(~w[22], w[24]);
+            if (!WaitForFrame(~w[22], w[24])) {
+                TipcReplyWords(ctx, {0, 0, 0, 0, 0, 0});
+                return;
+            }
         }
         const auto waited = std::chrono::steady_clock::now();
         PaceToVblank();
@@ -1116,6 +1122,7 @@ private:
             if (m_stats.last_present != std::chrono::steady_clock::time_point{}) {
                 const long long frame = to_us(entered - m_stats.last_present);
                 m_stats.frame_us += frame;
+                ++m_stats.frame_intervals;
                 m_stats.max_frame_us = (std::max)(m_stats.max_frame_us, frame);
                 m_stats.hitches += frame > 100'000 ? 1 : 0;
             }
@@ -1125,7 +1132,7 @@ private:
                          "nx2:vi2 last 600 presents: frame {} us (max {}, {} over 100 ms), "
                          "blocked on the GPU fence {} us (max {}), composite {} us, vblank "
                          "pacing {} us",
-                         m_stats.frame_us / 599, m_stats.max_frame_us, m_stats.hitches,
+                         m_stats.frame_us / m_stats.frame_intervals, m_stats.max_frame_us, m_stats.hitches,
                          m_stats.fence_us / 600, m_stats.max_fence_us, m_stats.composite_us / 600,
                          m_stats.pace_us / 600);
                 m_stats = {.last_present = entered};
@@ -1138,17 +1145,17 @@ private:
 
     // The console's compositor frees a buffer only once its frame's GPU fence has passed, which
     // is what keeps a game from running ahead of the GPU. This reply always reports every buffer
-    // free, so pace the game here instead: wait (bounded, in case the GPU waits on the CPU) until
+    // free, so pace the game here instead: wait until
     // Eden's GPU thread has processed the frame. Otherwise the game laps the GPU thread and
     // rewrites command memory it hasn't read yet.
     u32 m_wait_timeouts{};
     struct PresentStats {
         long long frame_us{}, fence_us{}, composite_us{}, pace_us{}, max_fence_us{};
         long long max_frame_us{}, hitches{};
-        u32 presents{};
+        u32 presents{}, frame_intervals{};
         std::chrono::steady_clock::time_point last_present{};
     } m_stats{};
-    u32 m_previous_fence_id{~0U}; // none yet (WaitForFrame ignores ids >= 192)
+    u32 m_previous_fence_id{~0U}; // none yet
     u32 m_previous_fence_value{};
 
     // The console flips one frame per 60 Hz vblank and keeps the rest queued, so a game can't
@@ -1159,50 +1166,28 @@ private:
     void PaceToVblank() {
         const auto interval = Nx2Timing::PresentInterval(system.GetApplicationProcessProgramID(),
             Settings::values.use_speed_limit.GetValue(), Settings::SpeedLimit());
-        auto now = std::chrono::steady_clock::now();
-        const auto deadline = m_present_pacer.Deadline(now, interval);
-        while (now < deadline) {
-            std::this_thread::sleep_until(deadline);
-            now = std::chrono::steady_clock::now();
-        }
+        const auto now = std::chrono::steady_clock::now();
+        Nx2Timing::WaitForPresentDeadline(m_present_pacer.Deadline(now, interval));
     }
 
-    void WaitForFrame(u32 fence_id, u32 fence_value) {
-        if (fence_id >= 192) {
-            return;
+    bool WaitForFrame(u32 fence_id, u32 fence_value) {
+        if (fence_id == ~0U) {
+            return true;
         }
         auto& syncpoints = system.Host1x().GetSyncpointManager();
         const auto start = std::chrono::steady_clock::now();
-        // Long enough to cover shader/pipeline compile stalls: a game that gets more than a few
-        // command buffers ahead misses the equal-value gates its other channels acquire.
-        const auto deadline = start + std::chrono::milliseconds{4000};
-        if (!syncpoints.IsReadyGuest(fence_id, fence_value)) {
-            // Woken by the GPU thread as it reaches the fence. Polling with 200 us sleeps slept
-            // about 1 ms per check on Windows, added to every frame. An action left registered
-            // after a timeout fires later on a state nobody waits on.
-            struct Wake {
-                std::mutex mutex;
-                std::condition_variable cv;
-                bool done{};
-            };
-            auto wake = std::make_shared<Wake>();
-            syncpoints.RegisterGuestAction(fence_id, fence_value, [wake] {
-                {
-                    std::scoped_lock lk{wake->mutex};
-                    wake->done = true;
+        const bool ready = syncpoints.WaitGuestInterruptible(
+            fence_id, fence_value,
+            [this] { return !system.IsPoweredOn() || system.IsShuttingDown(); },
+            [&] {
+                if (m_wait_timeouts++ < 64) {
+                    LOG_WARNING(Service,
+                                "nx2:vi2 present #{} still waiting for fence ({}, {}), now {}; "
+                                "keeping buffers in use during GPU stall",
+                                m_presents, fence_id, fence_value,
+                                syncpoints.GetGuestSyncpointValue(fence_id));
                 }
-                wake->cv.notify_all();
             });
-            std::unique_lock lk{wake->mutex};
-            while (!wake->done && system.IsPoweredOn() &&
-                   std::chrono::steady_clock::now() < deadline) {
-                wake->cv.wait_for(lk, std::chrono::milliseconds{50});
-            }
-        }
-        if (!syncpoints.IsReadyGuest(fence_id, fence_value) && m_wait_timeouts++ < 64) {
-            LOG_WARNING(Service, "nx2:vi2 present #{} fence ({}, {}) not reached in 4 s (now {})",
-                        m_presents, fence_id, fence_value, syncpoints.GetGuestSyncpointValue(fence_id));
-        }
         if (m_presents <= 8 || (m_presents % 600) == 0) {
             LOG_INFO(Service, "nx2:vi2 present #{} fence ({}, {}) now {}, waited {} us",
                      m_presents, fence_id, fence_value, syncpoints.GetGuestSyncpointValue(fence_id),
@@ -1210,6 +1195,7 @@ private:
                          std::chrono::steady_clock::now() - start)
                          .count());
         }
+        return ready;
     }
 
     // Shows a presented native image: word 5 is the image id, ~word 22 / word 24 the GPU fence

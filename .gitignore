@@ -67,3 +67,14 @@ vulkansdk*.exe
 
 # Build-time generated external sources
 externals/generated
+
+# Local app packages, credentials, and diagnostic captures
+*.app/
+*.dmg
+*.gputrace/
+*.keys
+.env
+.env.*
+.vercel/
+__pycache__/
+*.pyc

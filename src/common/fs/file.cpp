@@ -4,6 +4,9 @@
 // SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <algorithm>
+#include <cerrno>
+#include <limits>
 #include <vector>
 
 #include "common/assert.h"
@@ -364,6 +367,40 @@ bool IOFile::Commit() const {
     }
 
     return commit_result;
+}
+
+size_t IOFile::ReadAt(std::span<u8> data, u64 offset) const {
+    if (!IsOpen() || GetAccessMode() != FileAccessMode::Read) {
+        return 0;
+    }
+#ifdef _WIN32
+    if (offset > static_cast<u64>(std::numeric_limits<s64>::max()) ||
+        !Seek(static_cast<s64>(offset))) {
+        return 0;
+    }
+    return ReadSpan(data);
+#else
+    const auto max_offset = static_cast<u64>(std::numeric_limits<off_t>::max());
+    if (offset > max_offset || data.size() > max_offset - offset) {
+        return 0;
+    }
+    const int fd = fileno(file);
+    size_t total = 0;
+    while (total < data.size()) {
+        const size_t count =
+            std::min(data.size() - total, static_cast<size_t>(std::numeric_limits<ssize_t>::max()));
+        const ssize_t result =
+            pread(fd, data.data() + total, count, static_cast<off_t>(offset + total));
+        if (result < 0 && errno == EINTR) {
+            continue;
+        }
+        if (result <= 0) {
+            break;
+        }
+        total += static_cast<size_t>(result);
+    }
+    return total;
+#endif
 }
 
 bool IOFile::SetSize(u64 size) const {

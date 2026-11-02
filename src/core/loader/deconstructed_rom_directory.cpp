@@ -233,7 +233,7 @@ AppLoader_DeconstructedRomDirectory::AppLoader_DeconstructedRomDirectory(FileSys
         name = control->GetApplicationName();
     }
 
-    romfs = FindLooseRomFS(file_dir);
+    romfs_source = file_dir;
     if (const auto title_dir = file_dir->GetParentDirectory()) {
         romfs_version = RomFSProductVersion(title_dir->GetSubdirectory("romfs"));
     }
@@ -245,7 +245,7 @@ AppLoader_DeconstructedRomDirectory::AppLoader_DeconstructedRomDirectory(
     , dir(std::move(directory))
     , override_update(override_update_)
 {
-    romfs = FindLooseRomFS(dir);
+    romfs_source = dir;
 }
 
 FileType AppLoader_DeconstructedRomDirectory::IdentifyType(const FileSys::VirtualFile& dir_file) {
@@ -304,11 +304,12 @@ AppLoader_DeconstructedRomDirectory::LoadResult AppLoader_DeconstructedRomDirect
 
     // Loose-ExeFS loads bypass the NCA/NSP loaders, which are the ones that normally apply
     // LayeredFS to the RomFS; apply it here so mods in user/load/<titleid>/ work too.
-    if (romfs != nullptr) {
+    FileSys::VirtualFile base_romfs;
+    if (ReadRomFS(base_romfs) == ResultStatus::Success) {
         const FileSys::PatchManager patch_manager(metadata.GetTitleID(),
                                                   system.GetFileSystemController(),
                                                   system.GetContentProvider());
-        auto patched = patch_manager.PatchRomFS(nullptr, romfs);
+        auto patched = patch_manager.PatchRomFS(nullptr, base_romfs);
         if (patched != nullptr) {
             romfs = std::move(patched);
             LOG_INFO(Loader, "Applied RomFS patches (LayeredFS) for title {:016X}",
@@ -414,6 +415,10 @@ AppLoader_DeconstructedRomDirectory::LoadResult AppLoader_DeconstructedRomDirect
 }
 
 ResultStatus AppLoader_DeconstructedRomDirectory::ReadRomFS(FileSys::VirtualFile& out_dir) {
+    if (!romfs_initialized) {
+        romfs = FindLooseRomFS(romfs_source);
+        romfs_initialized = true;
+    }
     if (romfs == nullptr) {
         return ResultStatus::ErrorNoRomFS;
     }

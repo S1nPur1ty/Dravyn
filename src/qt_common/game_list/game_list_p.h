@@ -24,6 +24,7 @@
 #include "frontend_common/play_time_manager.h"
 #include "qt_common/config/uisettings.h"
 #include "qt_common/qt_common.h"
+#include "qt_common/game_list/artwork.h"
 
 enum class GameListItemType {
     Game = QStandardItem::UserType + 1,
@@ -36,17 +37,6 @@ enum class GameListItemType {
 };
 
 Q_DECLARE_METATYPE(GameListItemType);
-
-/**
- * Gets the default icon (for games without valid title metadata)
- * @param size The desired width and height of the default icon.
- * @return QPixmap default icon
- */
-static QPixmap GetDefaultIcon(u32 size) {
-    QPixmap icon(size, size);
-    icon.fill(Qt::transparent);
-    return icon;
-}
 
 static QPixmap ThemeIcon(const char* name) {
     const int size = UISettings::values.folder_icon_size.GetValue();
@@ -80,6 +70,9 @@ public:
     static constexpr int FullPathRole = SortRole + 2;
     static constexpr int ProgramIdRole = SortRole + 3;
     static constexpr int FileTypeRole = SortRole + 4;
+    static constexpr int SourceDirectoryRole = SortRole + 5;
+    static constexpr int PlayTimeRole = SortRole + 6;
+    static constexpr int RecentOrderRole = SortRole + 7;
 
     GameListItemPath() = default;
     GameListItemPath(const QString& game_path, const std::vector<u8>& picture_data,
@@ -110,15 +103,17 @@ public:
 
         const auto tooltip = QStringLiteral("%1\n%2").arg(readable_play_time, enabled_update);
 
-        setData(tooltip, Qt::ToolTipRole);
+        setData(QStringLiteral("%1\n%2").arg(game_name, tooltip), Qt::ToolTipRole);
+        setData(readable_play_time, PlayTimeRole);
+        setData(game_name, Qt::AccessibleTextRole);
 
-        const u32 size = UISettings::values.game_icon_size.GetValue();
-
-        QPixmap picture;
-        if (!picture.loadFromData(picture_data.data(), static_cast<u32>(picture_data.size()))) {
-            picture = GetDefaultIcon(size);
+        QPixmap picture(GameListArtwork::Path(game_path, program_id));
+        if (picture.isNull()) {
+            picture.loadFromData(picture_data.data(), static_cast<u32>(picture_data.size()));
         }
-        picture = picture.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        if (!picture.isNull()) {
+            picture = picture.scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
 
         setData(picture, Qt::DecorationRole);
     }
@@ -127,7 +122,35 @@ public:
         return static_cast<int>(GameListItemType::Game);
     }
 
+    bool operator<(const QStandardItem& other) const override {
+        if (model() && model()->sortRole() == RecentOrderRole) {
+            const int recent = data(RecentOrderRole).toInt();
+            const int other_recent = other.data(RecentOrderRole).toInt();
+            if (recent != other_recent) {
+                return recent < other_recent;
+            }
+            const auto title = data(SortRole).toString();
+            const auto other_title = other.data(SortRole).toString();
+            if (title != other_title) {
+                return title < other_title;
+            }
+            return data(FullPathRole).toString() < other.data(FullPathRole).toString();
+        }
+        return GameListItem::operator<(other);
+    }
+
     QVariant data(int role) const override {
+        if (role == Qt::AccessibleTextRole) {
+            return data(Qt::DisplayRole);
+        }
+        if (role == Qt::DecorationRole &&
+            UISettings::values.game_list_mode.GetValue() == Settings::GameListMode::TreeView) {
+            const auto picture = GameListItem::data(role).value<QPixmap>();
+            const int size = UISettings::values.game_icon_size.GetValue();
+            return picture.isNull() || size == 0
+                       ? QVariant{} : QVariant{picture.scaled(size, size, Qt::KeepAspectRatio,
+                                                              Qt::SmoothTransformation)};
+        }
         if (role == Qt::DisplayRole || role == SortRole) {
             std::string filename;
             Common::SplitPath(data(FullPathRole).toString().toStdString(), nullptr, &filename,
@@ -165,8 +188,10 @@ public:
                 return QStringLiteral("%1\n    %2").arg(row1, row2);
             }
             case Settings::GameListMode::GridView:
-            case Settings::GameListMode::CarouselView:
-                return row1;
+            case Settings::GameListMode::CarouselView: {
+                const auto title = row_data[3].trimmed().isEmpty() ? row_data[0] : row_data[3];
+                return role == SortRole ? title.toLower() : title;
+            }
             default:
                 break;
             }

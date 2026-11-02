@@ -60,6 +60,8 @@ public:
 private:
     FileSys::ProgramMetadata metadata;
     FileSys::VirtualFile romfs;
+    FileSys::VirtualDir romfs_source;
+    bool romfs_initialized = false;
     FileSys::VirtualDir dir;
 
     std::vector<u8> icon_data;

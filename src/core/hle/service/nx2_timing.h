@@ -3,8 +3,10 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <optional>
+#include <thread>
 #include "common/common_types.h"
 
 namespace Service::Nx2Timing {
@@ -22,6 +24,25 @@ inline std::chrono::nanoseconds PresentInterval(u64 program_id, bool limited, u1
     }
     const s64 denominator = 60LL * speed;
     return std::chrono::nanoseconds{(100'000'000'000LL + denominator - 1) / denominator};
+}
+
+inline void WaitForPresentDeadline(std::chrono::steady_clock::time_point deadline) {
+    using Clock = std::chrono::steady_clock;
+#ifdef __APPLE__
+    // macOS timer wakeups can overshoot the vblank. Sleep for the bulk of the wait,
+    // then spend at most 500 us checking the clock, never returning before the deadline.
+    constexpr auto guard = std::chrono::microseconds{500};
+    if (Clock::now() < deadline - guard) {
+        std::this_thread::sleep_until(deadline - guard);
+    }
+    while (Clock::now() < deadline) {
+        std::atomic_signal_fence(std::memory_order_seq_cst);
+    }
+#else
+    while (Clock::now() < deadline) {
+        std::this_thread::sleep_until(deadline);
+    }
+#endif
 }
 
 class PresentPacer {

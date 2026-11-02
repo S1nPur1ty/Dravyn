@@ -8,6 +8,7 @@
 
 #include <array>
 #include <QFrame>
+#include <QPixmap>
 #include <QPointer>
 
 #include "common/input.h"
@@ -50,10 +51,24 @@ public:
     // Updates input on scheduled interval
     void UpdateInput();
 
+signals:
+    void ButtonClicked(int button_id);
+    void StickClicked(int stick_id);
+
 protected:
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    QRectF IllustrationRect() const;
+    int ControlAt(QPointF position) const;
+    void DrawIllustration(QPainter& painter);
+
+    QPixmap controller_illustration;
+    int hovered_control{-1};
+
     enum class Direction : std::size_t {
         None,
         Up,
@@ -213,7 +228,7 @@ private:
     bool is_controller_set{};
     bool is_connected{};
     bool needs_redraw{};
-    Core::HID::NpadStyleIndex controller_type;
+    Core::HID::NpadStyleIndex controller_type{Core::HID::NpadStyleIndex::Fullkey};
 
     bool mapping_active{};
     int blink_counter{};

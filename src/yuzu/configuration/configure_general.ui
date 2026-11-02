@@ -72,14 +72,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_external_buttons">
           <item>
-           <widget class="QPushButton" name="add_external_dir_button">
+           <widget class="UIControls::Button" name="add_external_dir_button">
             <property name="text">
              <string>Add Directory</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="remove_external_dir_button">
+           <widget class="UIControls::Button" name="remove_external_dir_button">
             <property name="text">
              <string>Remove Selected</string>
             </property>
@@ -137,7 +137,7 @@
         <number>5</number>
        </property>
        <item>
-        <widget class="QPushButton" name="button_reset_defaults">
+        <widget class="UIControls::Button" name="button_reset_defaults">
          <property name="text">
           <string>Reset All Settings</string>
          </property>
@@ -162,6 +162,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

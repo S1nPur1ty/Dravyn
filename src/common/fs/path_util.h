@@ -7,11 +7,15 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include <vector>
 
 #include "common/fs/fs_util.h"
 
 namespace Common::FS {
+
+// Empty for ordinary builds. Versioned macOS bundles opt into an isolated profile.
+std::string GetBundleProfileName();
 
 enum class EdenPath {
     EdenDir,        // Where yuzu stores its data.

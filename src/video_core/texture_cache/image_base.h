@@ -50,9 +50,6 @@ enum class ImageFlagBits : u32 {
     /// in VRAM); uploads skip the rest, downloads are never done.
     TrimmedLevels = 1 << 19,
     ZeroFilled = 1 << 20, ///< Cleared to zero blocks before its first asynchronous decode.
-    /// Over Switch 2 sparse blocks nobody wrote: all zeros, so the host image has no memory
-    /// (Unbacked) until the first write, which makes a backed image replace it.
-    UnwrittenSparse = 1 << 21,
     /// A large array over Switch 2 sparse blocks: unbacked, each layer gets device memory when
     /// something is written to it (Image::BindLayers) and only those layers are uploaded.
     SparseLayers = 1 << 22,

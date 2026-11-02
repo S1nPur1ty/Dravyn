@@ -23,7 +23,7 @@
       </size>
      </property>
      <property name="text">
-      <string>Warning: The settings in this page affect the inner workings of Eglantine's emulated touchscreen. Changing them may result in undesirable behavior, such as the touchscreen partially or not working. You should only use this page if you know what you are doing.</string>
+      <string>Warning: The settings in this page affect the inner workings of Dravyn's emulated touchscreen. Changing them may result in undesirable behavior, such as the touchscreen partially or not working. You should only use this page if you know what you are doing.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -127,7 +127,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="restore_defaults_button">
+      <widget class="UIControls::Button" name="restore_defaults_button">
        <property name="text">
         <string>Restore Defaults</string>
        </property>
@@ -144,6 +144,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

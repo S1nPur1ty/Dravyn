@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <QStringList>
+
 #include <array>
 #include <functional>
 #include <memory>
@@ -74,7 +76,10 @@ public:
     /// Clear all input configuration.
     void ClearAll();
 
+    QStringList BindingState() const;
+
 signals:
+    void BindingsChanged();
     /// Emitted when this controller is (dis)connected by the user.
     void Connected(bool connected);
     /// Emitted when the Handheld mode is selected (undocked with dual joycons attached).
@@ -90,6 +95,7 @@ signals:
 
 protected:
     void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     QString ButtonToText(const Common::ParamPackage& param);

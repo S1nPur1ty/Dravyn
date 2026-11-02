@@ -38,6 +38,7 @@ bool ShouldCreateGuestApplet(AppletId applet_id) {
     X(NetConnect, net_connect)
     X(ProfileSelect, player_select)
     X(SoftwareKeyboard, swkbd)
+    X(SoftwareKeyboardNx2, swkbd)
     X(MiiEdit, mii_edit)
     X(Web, web)
     X(Shop, shop)

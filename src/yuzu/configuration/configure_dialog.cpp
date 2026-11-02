@@ -5,13 +5,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <memory>
+#include <QPropertyAnimation>
+#include <QShowEvent>
+#include <QStackedWidget>
+#include <QTabBar>
+#include <QTreeWidget>
 #include "common/logging.h"
 #include "common/settings.h"
 #include "common/settings_enums.h"
+#include "configuration/style.h"
 #include "core/core.h"
 #include "qt_common/config/uisettings.h"
 #include "qt_common/util/vk.h"
 #include "ui_configure.h"
+#include "yuzu/configuration/change_tracker.h"
 #include "yuzu/configuration/configure_applets.h"
 #include "yuzu/configuration/configure_audio.h"
 #include "yuzu/configuration/configure_cpu.h"
@@ -26,11 +33,14 @@
 #include "yuzu/configuration/configure_input.h"
 #include "yuzu/configuration/configure_input_player.h"
 #include "yuzu/configuration/configure_network.h"
+#include "yuzu/configuration/configure_overview.h"
 #include "yuzu/configuration/configure_profile_manager.h"
 #include "yuzu/configuration/configure_system.h"
 #include "yuzu/configuration/configure_ui.h"
 #include "yuzu/configuration/configure_web.h"
 #include "yuzu/hotkeys.h"
+#include "yuzu/util/design_system.h"
+#include "yuzu/util/page_transition.h"
 
 ConfigureDialog::ConfigureDialog(QWidget* parent, HotkeyRegistry& registry_,
                                  InputCommon::InputSubsystem* input_subsystem,
@@ -65,6 +75,17 @@ ConfigureDialog::ConfigureDialog(QWidget* parent, HotkeyRegistry& registry_,
     Settings::SetConfiguringGlobal(true);
 
     ui->setupUi(this);
+    ConfigurationShared::ApplyDialogStyle(this);
+    ui->verticalLayout->setContentsMargins(20, 20, 20, 20);
+    ui->verticalLayout->setSpacing(18);
+    ui->horizontalLayout->setSpacing(18);
+    ui->selectorList->setFixedWidth(168);
+    ui->selectorList->setSpacing(4);
+    setMinimumWidth(960);
+    ui->tabWidget->setTabBarAutoHide(true);
+    transition = new UIAnimation::PageTransition(
+        ui->tabWidget->findChild<QStackedWidget*>(QString{}, Qt::FindDirectChildrenOnly));
+    ui->tabWidget->tabBar()->installEventFilter(this);
 
     ui->tabWidget->addTab(applets_tab.get(), tr("Applets"));
     ui->tabWidget->addTab(audio_tab.get(), tr("Audio"));
@@ -87,6 +108,15 @@ ConfigureDialog::ConfigureDialog(QWidget* parent, HotkeyRegistry& registry_,
     hotkeys_tab->Populate(registry);
 
     input_tab->Initialize(input_subsystem);
+    overview_tab = std::make_unique<ConfigureOverview>(*builder, *input_tab, system, this);
+    connect(overview_tab.get(), &ConfigureOverview::GraphicsRequested, this,
+            [this] { ui->selectorList->setCurrentRow(3); });
+    connect(overview_tab.get(), &ConfigureOverview::ControllersRequested, this,
+            [this] { ui->selectorList->setCurrentRow(2); });
+    connect(overview_tab.get(), &ConfigureOverview::ProfilesRequested, this, [this] {
+        ui->selectorList->setCurrentRow(5);
+        ui->tabWidget->setCurrentIndex(1);
+    });
 
     general_tab->SetResetCallback([&] { this->close(); });
 
@@ -96,6 +126,7 @@ ConfigureDialog::ConfigureDialog(QWidget* parent, HotkeyRegistry& registry_,
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         if (index != -1) {
             debug_tab_tab->SetCurrentIndex(0);
+            transition->Start();
         }
     });
     connect(ui_tab.get(), &ConfigureUi::LanguageChanged, this, &ConfigureDialog::OnLanguageChanged);
@@ -104,17 +135,55 @@ ConfigureDialog::ConfigureDialog(QWidget* parent, HotkeyRegistry& registry_,
     connect(ui->selectorList, &QListWidget::itemSelectionChanged, this,
             &ConfigureDialog::UpdateVisibleTabs);
 
-    if (system.IsPoweredOn()) {
-        QPushButton* apply_button = ui->buttonBox->addButton(QDialogButtonBox::Apply);
-        connect(apply_button, &QAbstractButton::clicked, this,
-                &ConfigureDialog::HandleApplyButtonClicked);
+    // Keep a stable header height when there are no pending edits.
+    for (auto standard : {QDialogButtonBox::Cancel, QDialogButtonBox::Apply}) {
+        auto* original = ui->buttonBox->button(standard);
+        auto* button = new UIControls::Button(original->text(), ui->buttonBox);
+        const auto role = ui->buttonBox->buttonRole(original);
+        ui->buttonBox->removeButton(original);
+        delete original;
+        ui->buttonBox->addButton(button, role);
+        if (standard == QDialogButtonBox::Apply) {
+            button->setDefault(true);
+            connect(button, &QAbstractButton::clicked, this,
+                    &ConfigureDialog::HandleApplyButtonClicked);
+        }
     }
+    auto policy = ui->buttonBox->sizePolicy();
+    policy.setRetainSizeWhenHidden(true);
+    ui->buttonBox->setSizePolicy(policy);
+    changes = new ConfigurationShared::ChangeTracker(
+        this, [this](bool dirty) { ui->buttonBox->setVisible(dirty); });
+    changes->Watch(this);
+    connect(input_tab.get(), &ConfigureInput::ChildConfigurationChanged, changes,
+            &ConfigurationShared::ChangeTracker::ChildChangesCommitted);
+    for (auto* player : findChildren<ConfigureInputPlayer*>()) {
+        changes->Add(player, [player] { return player->BindingState(); });
+        connect(player, &ConfigureInputPlayer::BindingsChanged, changes,
+                &ConfigurationShared::ChangeTracker::ScheduleUpdate);
+    }
+    // Hotkey edits live in a model rather than a persistent line editor.
+    for (auto* tree : hotkeys_tab->findChildren<QTreeWidget*>()) {
+        changes->Add(tree, [tree] {
+            QStringList values;
+            QTreeWidgetItemIterator it(tree);
+            while (*it) {
+                for (int column = 0; column < tree->columnCount(); ++column) {
+                    values.append((*it)->text(column));
+                }
+                ++it;
+            }
+            return values;
+        });
+        connect(tree->model(), &QAbstractItemModel::dataChanged, changes,
+                &ConfigurationShared::ChangeTracker::ScheduleUpdate);
+    }
+    changes->Accept();
 
     adjustSize();
     ui->selectorList->setCurrentRow(0);
 
-    // Selects the leftmost button on the bottom bar (Cancel as of writing)
-    ui->buttonBox->setFocus();
+    ui->selectorList->setFocus();
 }
 
 ConfigureDialog::~ConfigureDialog() = default;
@@ -166,23 +235,23 @@ void ConfigureDialog::RetranslateUI() {
 void ConfigureDialog::HandleApplyButtonClicked() {
     UISettings::values.configuration_applied = true;
     ApplyConfiguration();
+    changes->Accept();
 }
 
 Q_DECLARE_METATYPE(QList<QWidget*>);
 
 void ConfigureDialog::PopulateSelectionList() {
-    const std::array<std::pair<QString, QList<QWidget*>>, 6> items{
-        {{tr("General"),
-          {general_tab.get(), hotkeys_tab.get(), ui_tab.get(), web_tab.get(), debug_tab_tab.get()}},
-         {tr("System"),
-          {system_tab.get(), profile_tab.get(), network_tab.get(), filesystem_tab.get(),
-           applets_tab.get()}},
-         {tr("CPU"), {cpu_tab.get()}},
-         {tr("Graphics"),
-          {graphics_tab.get(), graphics_advanced_tab.get(), graphics_extensions_tab.get()}},
-         {tr("Audio"), {audio_tab.get()}},
-         {tr("Controls"), input_tab->GetSubTabs()}},
-    };
+    const std::array<std::pair<QString, QList<QWidget*>>, 7> items{{
+        {tr("Overview"), {overview_tab.get()}},
+        {tr("General"),
+         {general_tab.get(), hotkeys_tab.get(), ui_tab.get(), filesystem_tab.get(), web_tab.get()}},
+        {tr("Controllers"), input_tab->GetSubTabs()},
+        {tr("Graphics"),
+         {graphics_tab.get(), graphics_advanced_tab.get(), graphics_extensions_tab.get()}},
+        {tr("Audio"), {audio_tab.get()}},
+        {tr("System"), {system_tab.get(), profile_tab.get(), network_tab.get(), applets_tab.get()}},
+        {tr("Advanced"), {cpu_tab.get(), debug_tab_tab.get()}},
+    }};
 
     [[maybe_unused]] const QSignalBlocker blocker(ui->selectorList);
 
@@ -213,12 +282,60 @@ void ConfigureDialog::UpdateVisibleTabs() {
 
     [[maybe_unused]] const QSignalBlocker blocker(ui->tabWidget);
 
+    transition->Capture();
+    ui->tabWidget->setUpdatesEnabled(false);
     ui->tabWidget->clear();
 
     const auto tabs = qvariant_cast<QList<QWidget*>>(items[0]->data(Qt::UserRole));
 
     for (auto* const tab : tabs) {
         LOG_DEBUG(Frontend, "{}", tab->accessibleName().toStdString());
-        ui->tabWidget->addTab(tab, tab->accessibleName());
+        auto* scroll = scroll_pages.value(tab);
+        if (!scroll) {
+            scroll = ConfigurationShared::CreateScrollablePage(tab, ui->tabWidget);
+            scroll_pages.insert(tab, scroll);
+        }
+        ui->tabWidget->addTab(scroll, tab->accessibleName());
     }
+    ui->tabWidget->setUpdatesEnabled(true);
+    transition->Start();
+}
+
+bool ConfigureDialog::eventFilter(QObject* object, QEvent* event) {
+    if (object == ui->tabWidget->tabBar() &&
+        (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::KeyPress)) {
+        transition->Capture();
+    }
+    return QDialog::eventFilter(object, event);
+}
+
+void ConfigureDialog::showEvent(QShowEvent* event) {
+    QDialog::showEvent(event);
+    if (!event->spontaneous() && UIAnimation::IsEnabled(this)) {
+        setWindowOpacity(0.0);
+        auto* animation = new QPropertyAnimation(this, "windowOpacity", this);
+        animation->setDuration(300);
+        animation->setStartValue(0.0);
+        animation->setEndValue(1.0);
+        animation->setEasingCurve(QEasingCurve::OutCubic);
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+}
+
+void ConfigureDialog::done(int result) {
+    if (closing) {
+        return;
+    }
+    if (!isVisible() || !UIAnimation::IsEnabled(this)) {
+        QDialog::done(result);
+        return;
+    }
+    closing = true;
+    auto* animation = new QPropertyAnimation(this, "windowOpacity", this);
+    animation->setDuration(150);
+    animation->setStartValue(windowOpacity());
+    animation->setEndValue(0.0);
+    connect(animation, &QPropertyAnimation::finished, this,
+            [this, result] { QDialog::done(result); });
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }

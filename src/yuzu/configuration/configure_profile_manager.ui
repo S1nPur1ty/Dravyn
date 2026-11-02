@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>ConfigureProfileManager</class>
  <widget class="QWidget" name="ConfigureProfileManager">
@@ -22,7 +22,7 @@
      <item>
       <widget class="QGroupBox" name="gridGroupBox">
        <property name="title">
-        <string>Profile Manager</string>
+        <string>Profiles</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
         <property name="sizeConstraint">
@@ -30,19 +30,6 @@
         </property>
         <item row="0" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Current User</string>
-            </property>
-           </widget>
-          </item>
           <item>
            <widget class="QGraphicsView" name="current_user_icon">
             <property name="minimumSize">
@@ -75,35 +62,47 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="current_user_username">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+           <layout class="QVBoxLayout" name="current_user_labels">
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Current profile</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="current_user_username">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Username</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="current_user_spacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
-            <property name="text">
-             <string>Username</string>
-            </property>
-           </widget>
+           </spacer>
           </item>
          </layout>
         </item>
         <item row="1" column="0">
-         <widget class="QScrollArea" name="scrollArea">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
-          </property>
-          <property name="widgetResizable">
-           <bool>false</bool>
-          </property>
-         </widget>
+         <widget class="QWidget" name="profile_list_container">
+          </widget>
         </item>
         <item row="2" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -121,9 +120,9 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pm_add">
+           <widget class="UIControls::Button" name="pm_add">
             <property name="text">
-             <string>Add</string>
+             <string>Add profile</string>
             </property>
            </widget>
           </item>
@@ -146,6 +145,13 @@
    </item>
   </layout>
  </widget>
- <resources/>
- <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
 </ui>

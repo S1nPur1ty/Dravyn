@@ -7,6 +7,7 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 
 #include "common/common_funcs.h"
 #include "common/common_types.h"
@@ -45,8 +46,10 @@ public:
 
 private:
     void AutoTimestamp(std::stop_token stop_token);
-    void Save();
+    // Caller holds database_mutex.
+    void SaveLocked();
 
+    mutable std::mutex database_mutex;
     PlayTimeDatabase database;
     u64 running_program_id{};
     std::jthread play_time_thread;

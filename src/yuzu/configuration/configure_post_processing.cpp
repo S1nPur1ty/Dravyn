@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "yuzu/util/design_system.h"
+#include "yuzu/util/popup.h"
 #include <array>
 #include <cmath>
 #include <string>
@@ -85,10 +87,10 @@ ConfigurePostProcessing::ConfigurePostProcessing(QWidget* parent) : QDialog(pare
     auto* preset_row = new QHBoxLayout();
     preset_row->addWidget(new QLabel(tr("Preset:"), this));
 
-    preset_combo = new QComboBox(this);
+    preset_combo = new UIControls::ComboBox(this);
     preset_row->addWidget(preset_combo, 1);
 
-    auto* apply_button = new QPushButton(tr("Apply"), this);
+    auto* apply_button = new UIControls::Button(tr("Apply"), this);
     connect(apply_button, &QPushButton::clicked, this, [this]() {
         const QString name = preset_combo->currentData().toString();
         if (name.isEmpty()) {
@@ -99,7 +101,7 @@ ConfigurePostProcessing::ConfigurePostProcessing(QWidget* parent) : QDialog(pare
     });
     preset_row->addWidget(apply_button);
 
-    auto* reset_button = new QPushButton(tr("Reset Values"), this);
+    auto* reset_button = new UIControls::Button(tr("Reset Values"), this);
     reset_button->setToolTip(tr("Return every effect to the values the preset ships with."));
     connect(reset_button, &QPushButton::clicked, this, [this]() {
         const std::string active = VideoCore::GetActiveFxPreset();
@@ -111,7 +113,7 @@ ConfigurePostProcessing::ConfigurePostProcessing(QWidget* parent) : QDialog(pare
     });
     preset_row->addWidget(reset_button);
 
-    auto* save_button = new QPushButton(tr("Save As..."), this);
+    auto* save_button = new UIControls::Button(tr("Save As..."), this);
     connect(save_button, &QPushButton::clicked, this, [this]() {
         bool accepted = false;
         const QString name =
@@ -126,7 +128,7 @@ ConfigurePostProcessing::ConfigurePostProcessing(QWidget* parent) : QDialog(pare
     });
     preset_row->addWidget(save_button);
 
-    auto* clear_button = new QPushButton(tr("Clear"), this);
+    auto* clear_button = new UIControls::Button(tr("Clear"), this);
     clear_button->setToolTip(tr("Remove every effect in use and deselect the preset."));
     connect(clear_button, &QPushButton::clicked, this, [this]() {
         VideoCore::FxChain::Instance().Clear();
@@ -152,7 +154,7 @@ ConfigurePostProcessing::ConfigurePostProcessing(QWidget* parent) : QDialog(pare
 
     auto* actions = new QHBoxLayout();
 
-    auto* add_button = new QPushButton(tr("Add Effect"), this);
+    auto* add_button = new UIControls::Button(tr("Add Effect"), this);
     auto* add_menu = new QMenu(add_button);
     for (const auto& effect : VideoCore::GetFxCatalog()) {
         if (!effect.Valid()) {
@@ -299,7 +301,7 @@ void ConfigurePostProcessing::BuildUniformWidget(QWidget* parent, QVBoxLayout* l
         uniform.ui_type == VideoCore::FxUiType::Radio) {
         auto* row = new QHBoxLayout();
         row->addWidget(new QLabel(label, parent));
-        auto* combo = new QComboBox(parent);
+        auto* combo = new UIControls::ComboBox(parent);
         for (size_t i = 0; i < uniform.items.size(); ++i) {
             combo->addItem(QString::fromStdString(uniform.items[i]), static_cast<int>(i));
         }
@@ -382,7 +384,7 @@ QWidget* ConfigurePostProcessing::BuildSlot(int index, const VideoCore::FxChainE
     toggle->setCheckable(true);
     header->addWidget(toggle);
 
-    auto* combo = new QComboBox(group);
+    auto* combo = new UIControls::ComboBox(group);
     PopulateEffectCombo(combo, entry);
     connect(combo, &QComboBox::currentIndexChanged, this, [this, index, combo](int) {
         const QString key = combo->currentData().toString();

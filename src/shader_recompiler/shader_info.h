@@ -331,6 +331,9 @@ struct Info {
 
     u32 used_clip_distances{};
 
+    // Per-workgroup storage backing when shared memory exceeds the host limit.
+    u32 shared_memory_storage_size{};
+
     boost::container::static_vector<ConstantBufferDescriptor, MAX_CBUFS>
         constant_buffer_descriptors;
     boost::container::static_vector<StorageBufferDescriptor, MAX_SSBOS> storage_buffers_descriptors;

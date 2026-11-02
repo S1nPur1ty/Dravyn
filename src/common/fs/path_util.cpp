@@ -17,6 +17,7 @@
 #endif
 #include "common/fs/fs_paths.h"
 #include "common/fs/path_util.h"
+#include "common/fs/profile_paths.h"
 #include "common/logging.h"
 
 #ifdef _WIN32
@@ -59,6 +60,22 @@
 namespace Common::FS {
 
 namespace fs = std::filesystem;
+
+std::string GetBundleProfileName() {
+#ifdef __APPLE__
+    const auto bundle = CFBundleGetMainBundle();
+    const auto value = bundle ? CFBundleGetValueForInfoDictionaryKey(
+                                   bundle, CFSTR("EglantineProfile")) : nullptr;
+    if (value && CFGetTypeID(value) == CFStringGetTypeID()) {
+        char name[65]{};
+        if (CFStringGetCString(static_cast<CFStringRef>(value), name, sizeof(name),
+                               kCFStringEncodingUTF8) && IsValidProfileName(name)) {
+            return name;
+        }
+    }
+#endif
+    return {};
+}
 
 /**
  * The PathManagerImpl is a singleton allowing to manage the mapping of
@@ -173,6 +190,17 @@ public:
         // cache
         GenerateEdenPath(EdenPath::CacheDir, eden_path_cache);
         GenerateEdenPath(EdenPath::ShaderDir, eden_path_cache / SHADER_DIR);
+#ifdef __APPLE__
+        if (const auto profile = GetBundleProfileName(); !profile.empty()) {
+            const auto paths = GetMacProfilePaths(GetHomeDirectory(), profile);
+            GenerateEdenPath(EdenPath::ConfigDir, paths.config);
+            GenerateEdenPath(EdenPath::CacheDir, paths.cache);
+            GenerateEdenPath(EdenPath::ShaderDir, paths.cache / SHADER_DIR);
+            GenerateEdenPath(EdenPath::LogDir, paths.logs);
+            GenerateEdenPath(EdenPath::DumpDir, paths.dumps);
+            GenerateEdenPath(EdenPath::CrashDumpsDir, paths.crash_dumps);
+        }
+#endif
 #ifdef _WIN32
         GenerateLegacyPath(EmuPath::RyujinxDir, GetAppDataRoamingDirectory() / RYUJINX_DIR);
 #else

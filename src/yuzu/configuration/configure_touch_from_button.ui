@@ -27,7 +27,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="mapping">
+      <widget class="UIControls::ComboBox" name="mapping">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -37,7 +37,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="button_new">
+      <widget class="UIControls::Button" name="button_new">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -50,7 +50,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="button_delete">
+      <widget class="UIControls::Button" name="button_delete">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -63,7 +63,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="button_rename">
+      <widget class="UIControls::Button" name="button_rename">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -111,7 +111,7 @@ Drag points to change position, or double-click table cells to edit values.</str
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="button_delete_bind">
+      <widget class="UIControls::Button" name="button_delete_bind">
        <property name="text">
         <string>Delete Point</string>
        </property>
@@ -207,6 +207,16 @@ Drag points to change position, or double-click table cells to edit values.</str
    <extends>QFrame</extends>
    <header>yuzu/configuration/configure_touch_widget.h</header>
    <container>1</container>
+  </customwidget>
+   <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

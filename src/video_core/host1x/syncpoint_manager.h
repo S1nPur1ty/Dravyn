@@ -19,10 +19,16 @@ namespace Host1x {
 class SyncpointManager {
 public:
     u32 GetGuestSyncpointValue(u32 id) const {
+        if (!ValidateId(id)) {
+            return 0;
+        }
         return syncpoints_guest[id].load(std::memory_order_acquire);
     }
 
     u32 GetHostSyncpointValue(u32 id) const {
+        if (!ValidateId(id)) {
+            return 0;
+        }
         return syncpoints_host[id].load(std::memory_order_acquire);
     }
 
@@ -36,12 +42,18 @@ public:
 
     template <typename Func>
     ActionHandle RegisterGuestAction(u32 syncpoint_id, u32 expected_value, Func&& action) {
+        if (!ValidateId(syncpoint_id)) {
+            return {};
+        }
         return RegisterAction(syncpoints_guest[syncpoint_id], guest_action_storage[syncpoint_id],
                               expected_value, std::move(action));
     }
 
     template <typename Func>
     ActionHandle RegisterHostAction(u32 syncpoint_id, u32 expected_value, Func&& action) {
+        if (!ValidateId(syncpoint_id)) {
+            return {};
+        }
         return RegisterAction(syncpoints_host[syncpoint_id], host_action_storage[syncpoint_id],
                               expected_value, std::move(action));
     }
@@ -58,15 +70,24 @@ public:
 
     void WaitHost(u32 syncpoint_id, u32 expected_value);
 
+    // A stall notification is diagnostic only; it must never complete the fence.
+    bool WaitGuestInterruptible(u32 syncpoint_id, u32 expected_value,
+                                 const std::function<bool()>& cancelled,
+                                 const std::function<void()>& on_stall);
+
     bool IsReadyGuest(u32 syncpoint_id, u32 expected_value) const {
-        return syncpoints_guest[syncpoint_id].load(std::memory_order_acquire) >= expected_value;
+        return ValidateId(syncpoint_id) &&
+               syncpoints_guest[syncpoint_id].load(std::memory_order_acquire) >= expected_value;
     }
 
     bool IsReadyHost(u32 syncpoint_id, u32 expected_value) const {
-        return syncpoints_host[syncpoint_id].load(std::memory_order_acquire) >= expected_value;
+        return ValidateId(syncpoint_id) &&
+               syncpoints_host[syncpoint_id].load(std::memory_order_acquire) >= expected_value;
     }
 
 private:
+    static bool ValidateId(u32 id);
+
     void Increment(std::atomic<u32>& syncpoint, std::condition_variable& wait_cv,
                    std::list<RegisteredAction>& action_storage);
 

@@ -14,13 +14,16 @@
    <string>Configure Vibration</string>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true" />
   </property>
   <layout class="QVBoxLayout">
-   <item row="0" column="0" colspan="4">
+   <item>
     <widget class="QLabel" name="label_1">
      <property name="text">
       <string>Press any controller button to vibrate the controller.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -29,466 +32,397 @@
      <property name="title">
       <string>Vibration</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0">
-      <property name="leftMargin">
-       <number>9</number>
+     <layout class="QGridLayout" name="vibrationPlayersLayout">
+      <property name="spacing">
+       <number>12</number>
       </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
-      <item>
-       <widget class="QWidget" name="player14Widget" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="vibrationGroupPlayer1">
+        <property name="title">
+         <string>Player 1</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_8">
          <property name="leftMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer1">
-           <property name="title">
-            <string>Player 1</string>
+          <widget class="QSpinBox" name="vibrationSpinPlayer1">
+           <property name="suffix">
+            <string>%</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="minimum">
+            <number>1</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_8">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer1">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer2">
-           <property name="title">
-            <string>Player 2</string>
+           <property name="maximum">
+            <number>150</number>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="value">
+            <number>100</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_9">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer2">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer3">
-           <property name="title">
-            <string>Player 3</string>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_10">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer3">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer4">
-           <property name="title">
-            <string>Player 4</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_11">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer4">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
-      <item>
-       <widget class="QWidget" name="player58Widget" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <item row="0" column="1">
+       <widget class="QGroupBox" name="vibrationGroupPlayer2">
+        <property name="title">
+         <string>Player 2</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_9">
          <property name="leftMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer7">
-           <property name="title">
-            <string>Player 5</string>
+          <widget class="QSpinBox" name="vibrationSpinPlayer2">
+           <property name="suffix">
+            <string>%</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="minimum">
+            <number>1</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_14">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer7">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
           </widget>
          </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="vibrationGroupPlayer3">
+        <property name="title">
+         <string>Player 3</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
          <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer8">
-           <property name="title">
-            <string>Player 6</string>
+          <widget class="QSpinBox" name="vibrationSpinPlayer3">
+           <property name="suffix">
+            <string>%</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="minimum">
+            <number>1</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_15">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer8">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
           </widget>
          </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QGroupBox" name="vibrationGroupPlayer4">
+        <property name="title">
+         <string>Player 4</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
          <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer5">
-           <property name="title">
-            <string>Player 7</string>
+          <widget class="QSpinBox" name="vibrationSpinPlayer4">
+           <property name="suffix">
+            <string>%</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="minimum">
+            <number>1</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_12">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer5">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
           </widget>
          </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="vibrationGroupPlayer5">
+        <property name="title">
+         <string>Player 5</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_12">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
          <item>
-          <widget class="QGroupBox" name="vibrationGroupPlayer6">
-           <property name="title">
-            <string>Player 8</string>
+          <widget class="QSpinBox" name="vibrationSpinPlayer5">
+           <property name="suffix">
+            <string>%</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
+           <property name="minimum">
+            <number>1</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_13">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QSpinBox" name="vibrationSpinPlayer6">
-              <property name="minimumSize">
-               <size>
-                <width>68</width>
-                <height>21</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>68</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="suffix">
-               <string>%</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>150</number>
-              </property>
-              <property name="value">
-               <number>100</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QGroupBox" name="vibrationGroupPlayer6">
+        <property name="title">
+         <string>Player 6</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_13">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QSpinBox" name="vibrationSpinPlayer6">
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QGroupBox" name="vibrationGroupPlayer7">
+        <property name="title">
+         <string>Player 7</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_14">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QSpinBox" name="vibrationSpinPlayer7">
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QGroupBox" name="vibrationGroupPlayer8">
+        <property name="title">
+         <string>Player 8</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_15">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QSpinBox" name="vibrationSpinPlayer8">
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>150</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
           </widget>
          </item>
         </layout>
@@ -514,28 +448,18 @@
     </widget>
    </item>
    <item>
-    <spacer name="spacerVibration">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>167</width>
-       <height>55</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
     <widget class="QDialogButtonBox" name="buttonBoxVibration">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
+   <property name="spacing">
+    <number>12</number>
+   </property>
   </layout>
  </widget>
- <resources/>
+ <resources />
  <connections>
   <connection>
    <sender>buttonBoxVibration</sender>

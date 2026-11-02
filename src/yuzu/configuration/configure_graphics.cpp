@@ -4,6 +4,7 @@
 // SPDX-FileCopyrightText: 2016 Citra Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "yuzu/util/design_system.h"
 #include <functional>
 #include <vector>
 #include <QBoxLayout>
@@ -307,7 +308,7 @@ void ConfigureGraphics::Setup(const ConfigurationShared::Builder& builder) {
             hold_graphics.emplace(setting->Id(), widget);
 #ifdef HAS_RESHADE
         } else if (setting->Id() == Settings::values.post_shader_enabled.Id()) {
-            QPushButton* post_shader_button = new QPushButton(tr("Configure Effects..."), widget);
+            QPushButton* post_shader_button = new UIControls::Button(tr("Configure Effects..."), widget);
             post_shader_button->setVisible(widget->checkbox->isChecked());
 
             connect(post_shader_button, &QAbstractButton::clicked, this, [this]() {

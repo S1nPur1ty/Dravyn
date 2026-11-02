@@ -1,0 +1,11 @@
+QStatusBar { background: #1b1b1f; color: #aaaab6; border-top: 1px solid #2d2d34; padding: 6px 10px; }
+QStatusBar::item { border: none; }
+QStatusBar QLabel { color: #aaaab6; background: transparent; font-size: 11px; }
+QStatusBar QPushButton { background: transparent; color: #c9c9d2; border: none; padding: 0 10px; margin: 0 2px; font-size: 11px; }
+QStatusBar QPushButton:checked { color: #ddd7ef; background: transparent; border: none; }
+QStatusBar QPushButton:hover { background: transparent; color: #ffffff; border: none; }
+QStatusBar QPushButton:pressed { background: transparent; color: #b6a7df; border: none; }
+QStatusBar QPushButton:focus { color: #ffffff; }
+QStatusBar QPushButton:disabled { color: #6e6e7a; background: transparent; border: none; }
+QStatusBar QPushButton#StatusMenuArrow { padding: 0; margin: 0; }
+QStatusBar QSizeGrip { background: transparent; }

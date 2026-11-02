@@ -15,6 +15,7 @@
 #include <type_traits>
 // TODO: find out which don't require stable iters
 #include <unordered_map>
+#include "video_core/texture_cache/upload_stats.h"
 #include "common/container/unordered_map.h"
 #include "common/container/unordered_set.h"
 #include <vector>
@@ -131,6 +132,7 @@ class TextureCache : public VideoCommon::ChannelSetupCaches<TextureCacheChannelI
     u64 images_uploaded{};   ///< Image contents uploaded from guest memory (last 600 frames)
     u64 uploaded_bytes{};    ///< Guest bytes those uploads read
     u64 largest_upload{};    ///< Largest of them
+    UploadStatistics upload_stats;
     u64 layer_uploads{};     ///< Of them, uploads of only the written layers
     bool native_thresholds_applied{};
     u64 native_critical_memory{};
@@ -201,6 +203,8 @@ public:
     void TickFrame();
 
     /// Return a constant reference to the given image view id
+    [[nodiscard]] const Image& GetImage(ImageId id) const noexcept;
+
     [[nodiscard]] const ImageView& GetImageView(ImageViewId id) const noexcept;
 
     /// Return a reference to the given image view id

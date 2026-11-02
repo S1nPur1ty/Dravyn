@@ -20,6 +20,7 @@ class System;
 class QCheckBox;
 class QString;
 class QTimer;
+class QRadioButton;
 
 class ConfigureInputAdvanced;
 class ConfigureInputPlayer;
@@ -50,6 +51,11 @@ public:
     void ApplyConfiguration();
 
     QList<QWidget*> GetSubTabs() const;
+    QRadioButton* DockedModeButton() const;
+    QRadioButton* HandheldModeButton() const;
+
+signals:
+    void ChildConfigurationChanged();
 
 private:
     void changeEvent(QEvent* event) override;

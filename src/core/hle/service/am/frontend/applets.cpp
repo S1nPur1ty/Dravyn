@@ -236,6 +236,7 @@ std::shared_ptr<FrontendApplet> FrontendAppletHolder::GetApplet(std::shared_ptr<
     case AppletId::ProfileSelect:
         return std::make_shared<ProfileSelect>(system, applet, mode, *frontend.profile_select);
     case AppletId::SoftwareKeyboard:
+    case AppletId::SoftwareKeyboardNx2:
         return std::make_shared<SoftwareKeyboard>(system, applet, mode, *frontend.software_keyboard);
     case AppletId::MiiEdit:
         return std::make_shared<MiiEdit>(system, applet, mode, *frontend.mii_edit);
@@ -253,7 +254,9 @@ std::shared_ptr<FrontendApplet> FrontendAppletHolder::GetApplet(std::shared_ptr<
     case AppletId::None:
         return nullptr;
     default:
-        UNIMPLEMENTED_MSG("No frontend implementation exists for applet_id={:02X} program_id={:016X}! Using stub applet.", static_cast<u8>(id), applet->program_id);
+        UNIMPLEMENTED_MSG("No frontend implementation exists for applet_id={:08X} "
+                          "program_id={:016X}! Using stub applet.",
+                          static_cast<u32>(id), applet->program_id);
         return std::make_shared<StubApplet>(system, applet, id, mode);
     }
 }

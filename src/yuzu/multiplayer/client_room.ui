@@ -42,7 +42,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="moderation">
+        <widget class="UIControls::Button" name="moderation">
          <property name="text">
           <string>Moderation...</string>
          </property>
@@ -52,7 +52,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="disconnect">
+        <widget class="UIControls::Button" name="disconnect">
          <property name="text">
           <string>Leave Room</string>
          </property>
@@ -73,6 +73,11 @@
    <extends>QWidget</extends>
    <header>multiplayer/chat_room.h</header>
    <container>1</container>
+  </customwidget>
+   <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

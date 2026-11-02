@@ -228,7 +228,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="reset_game_list_cache">
+           <widget class="UIControls::Button" name="reset_game_list_cache">
             <property name="text">
              <string>Reset Metadata Cache</string>
             </property>
@@ -256,6 +256,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -45,7 +45,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="language_combobox"/>
+           <widget class="UIControls::ComboBox" name="language_combobox"/>
           </item>
          </layout>
         </item>
@@ -59,7 +59,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="theme_combobox"/>
+           <widget class="UIControls::ComboBox" name="theme_combobox"/>
           </item>
          </layout>
         </item>
@@ -114,7 +114,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="folder_icon_size_combobox"/>
+           <widget class="UIControls::ComboBox" name="folder_icon_size_combobox"/>
           </item>
          </layout>
         </item>
@@ -128,7 +128,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="row_1_text_combobox"/>
+           <widget class="UIControls::ComboBox" name="row_1_text_combobox"/>
           </item>
          </layout>
         </item>
@@ -142,7 +142,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="row_2_text_combobox"/>
+           <widget class="UIControls::ComboBox" name="row_2_text_combobox"/>
           </item>
          </layout>
         </item>
@@ -205,7 +205,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="screenshot_height">
+             <widget class="UIControls::ComboBox" name="screenshot_height">
               <property name="editable">
                <bool>true</bool>
               </property>
@@ -242,6 +242,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

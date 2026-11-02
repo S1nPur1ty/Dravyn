@@ -29,6 +29,7 @@
 #include "video_core/texture_cache/samples_helper.h"
 #include "video_core/texture_cache/texture_cache_base.h"
 #include "video_core/texture_cache/util.h"
+#include "video_core/texture_cache/upload_batch.h"
 #include "video_core/nx2.h"
 #include "video_core/nx2_profile.h"
 #include "video_core/textures/decoders.h"
@@ -296,6 +297,18 @@ void TextureCache<P>::TickFrame() {
                  async_decodes_queued, astc_opaque_images, astc_alpha_images);
         LOG_INFO(HW_GPU, "Texture cache last 600 frames: {} uploads from guest memory, {} MiB (largest {} MiB, {} by layer)",
                  images_uploaded, uploaded_bytes >> 20, largest_upload >> 20, layer_uploads);
+        LOG_INFO(
+            HW_GPU,
+            "Texture upload CPU timing (last 600 frames): {} requests, {} us total, {} us max, "
+            "{} over 16.7 ms; staging/wait {} us, guest read {} us, unswizzle/convert {} us, "
+            "normalize/enqueue {} us, submit {} us; {} streamed chunks, peak staging request {} "
+            "KiB",
+            upload_stats.requests, upload_stats.total_ns / 1000, upload_stats.max_ns / 1000,
+            upload_stats.over_16ms, upload_stats.staging_ns / 1000, upload_stats.read_ns / 1000,
+            upload_stats.unswizzle_ns / 1000, upload_stats.enqueue_ns / 1000,
+            upload_stats.submit_ns / 1000, upload_stats.streamed_chunks,
+            upload_stats.peak_staging_bytes >> 10);
+        upload_stats = {};
         images_uploaded = uploaded_bytes = largest_upload = layer_uploads = 0;
         astc_opaque_images = astc_alpha_images = 0;
         std::vector<std::pair<u32, u64>> shapes;
@@ -330,6 +343,11 @@ void TextureCache<P>::TickFrame() {
         }
         async_buffers_death_ring.clear();
     }
+}
+
+template <class P>
+const typename P::Image& TextureCache<P>::GetImage(ImageId id) const noexcept {
+    return slot_images[id];
 }
 
 template <class P>
@@ -724,11 +742,6 @@ FramebufferId TextureCache<P>::GetFramebufferId(const RenderTargets& key) {
 template <class P>
 void TextureCache<P>::WriteMemory(DAddr cpu_addr, size_t size) {
     ForEachImageInRegion(cpu_addr, size, [this, cpu_addr, size](ImageId image_id, Image& image) {
-        if (True(image.flags & ImageFlagBits::UnwrittenSparse)) {
-            // Written at last: a backed image replaces it where it is used next.
-            image.flags |= ImageFlagBits::CpuModified | ImageFlagBits::Remapped;
-            return;
-        }
         if (UploadsByLayer(image)) {
             MarkLayersWritten(image, cpu_addr, size);
             return;
@@ -1304,6 +1317,7 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         return;
     }
     VideoCommon::Nx2Profile::Scope profile_scope{VideoCommon::Nx2Profile::Zone::TextureUpload};
+    UploadStatistics::Request upload_request{upload_stats};
 
     image.flags &= ~ImageFlagBits::CpuModified;
 
@@ -1351,10 +1365,25 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         QueueAsyncUnswizzle(image, image_id);
         return;
     }
+    if constexpr (requires { runtime.UseBoundedTextureUploads(); }) {
+        if (runtime.UseBoundedTextureUploads() && UploadsByLayer(image) &&
+            False(image.flags & ImageFlagBits::AcceleratedUpload)) {
+            std::vector<u32> layers(image.info.resources.layers);
+            std::iota(layers.begin(), layers.end(), 0U);
+            UploadLayers(image, layers);
+            runtime.InsertUploadMemoryBarrier();
+            return;
+        }
+    }
     ++images_uploaded;
     uploaded_bytes += image.guest_size_bytes;
     largest_upload = (std::max<u64>)(largest_upload, image.guest_size_bytes);
-    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
+    auto staging = [&] {
+        UploadStatistics::Phase timer{upload_stats.staging_ns};
+        const size_t size = MapSizeBytes(image);
+        upload_stats.peak_staging_bytes = std::max<u64>(upload_stats.peak_staging_bytes, size);
+        return runtime.UploadStagingBuffer(size);
+    }();
     UploadImageContents(image, staging);
     runtime.InsertUploadMemoryBarrier();
 }
@@ -1414,7 +1443,8 @@ bool TextureCache<P>::UploadWrittenLayers(Image& image) {
             }
         }
         image.dirty_layers.clear();
-        if (layers.empty() || layers.size() == num_layers) {
+        if (layers.empty() ||
+            (layers.size() == num_layers && True(image.flags & ImageFlagBits::AcceleratedUpload))) {
             return false;
         }
         UploadLayers(image, layers);
@@ -1472,30 +1502,72 @@ template <class P>
 void TextureCache<P>::UploadLayers(Image& image, std::span<const u32> layers) {
     if constexpr (requires { &Runtime::AccelerateImageUploadLayers; }) {
         if (False(image.flags & ImageFlagBits::AcceleratedUpload)) {
-            // Plain formats: each layer unswizzled on its own into its layer of the image.
             ImageInfo layer_info = image.info;
             layer_info.resources.layers = 1;
             const size_t layer_size = CalculateUnswizzledSizeBytes(layer_info);
-            auto staging = runtime.UploadStagingBuffer(layer_size * layers.size());
-            std::vector<BufferImageCopy> copies;
-            for (size_t i = 0; i < layers.size(); ++i) {
-                const GPUVAddr layer_addr = image.gpu_addr + u64{layers[i]} * image.info.layer_stride;
-                Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead>
-                    swizzle_data(*gpu_memory, layer_addr, image.info.layer_stride,
-                                 &swizzle_data_buffer);
-                auto layer_copies =
-                    UnswizzleImage(*gpu_memory, layer_addr, layer_info, swizzle_data,
-                                   staging.mapped_span.subspan(i * layer_size, layer_size));
-                for (BufferImageCopy copy : layer_copies) {
-                    copy.buffer_offset += i * layer_size;
-                    copy.image_subresource.base_layer = static_cast<s32>(layers[i]);
-                    copies.push_back(copy);
-                }
+            bool bounded = false;
+            if constexpr (requires { runtime.UseBoundedTextureUploads(); }) {
+                bounded = runtime.UseBoundedTextureUploads() && image.info.native_tiling &&
+                          IsPixelFormatASTC(image.info.format) &&
+                          False(image.flags & ImageFlagBits::Converted) &&
+                          UploadBatchLayers(layer_size, layers.size()) != 0 &&
+                          layer_size * layers.size() >= TextureUploadChunkBytes;
             }
-            image.UploadMemory(staging, copies);
-            ++images_uploaded;
-            uploaded_bytes += u64{image.info.layer_stride} * layers.size();
-            ++layer_uploads;
+            while (!layers.empty()) {
+                const size_t count =
+                    bounded ? UploadBatchLayers(layer_size, layers.size()) : layers.size();
+                const size_t bytes = layer_size * count;
+                auto staging = [&] {
+                    UploadStatistics::Phase timer{upload_stats.staging_ns};
+                    upload_stats.peak_staging_bytes =
+                        std::max<u64>(upload_stats.peak_staging_bytes, bytes);
+                    if constexpr (requires { runtime.StreamUploadStagingBuffer(bytes); }) {
+                        if (bounded) {
+                            return runtime.StreamUploadStagingBuffer(bytes);
+                        }
+                    }
+                    return runtime.UploadStagingBuffer(bytes);
+                }();
+                std::vector<BufferImageCopy> copies;
+                for (size_t i = 0; i < count; ++i) {
+                    const GPUVAddr layer_addr =
+                        image.gpu_addr + u64{layers[i]} * image.info.layer_stride;
+                    auto swizzle_data = [&] {
+                        UploadStatistics::Phase timer{upload_stats.read_ns};
+                        return Tegra::Memory::GpuGuestMemory<
+                            u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead>(
+                            *gpu_memory, layer_addr, image.info.layer_stride, &swizzle_data_buffer);
+                    }();
+                    auto layer_copies = [&] {
+                        UploadStatistics::Phase timer{upload_stats.unswizzle_ns};
+                        return UnswizzleImage(
+                            *gpu_memory, layer_addr, layer_info, swizzle_data,
+                            staging.mapped_span.subspan(i * layer_size, layer_size));
+                    }();
+                    for (BufferImageCopy copy : layer_copies) {
+                        copy.buffer_offset += i * layer_size;
+                        copy.image_subresource.base_layer = static_cast<s32>(layers[i]);
+                        copies.push_back(copy);
+                    }
+                }
+                {
+                    UploadStatistics::Phase timer{upload_stats.enqueue_ns};
+                    image.UploadMemory(staging, copies);
+                }
+                if constexpr (requires { runtime.CommitStreamUpload(); }) {
+                    if (bounded) {
+                        UploadStatistics::Phase timer{upload_stats.submit_ns};
+                        runtime.CommitStreamUpload();
+                        ++upload_stats.streamed_chunks;
+                    }
+                }
+                ++images_uploaded;
+                const u64 guest_bytes = u64{image.info.layer_stride} * count;
+                uploaded_bytes += guest_bytes;
+                largest_upload = std::max(largest_upload, guest_bytes);
+                ++layer_uploads;
+                layers = layers.subspan(count);
+            }
             return;
         }
         // Each layer's mip chain from the first level the host keeps on (as UploadImageContents).
@@ -1523,46 +1595,54 @@ void TextureCache<P>::UploadLayers(Image& image, std::span<const u32> layers) {
 template <class P>
 template <typename StagingBuffer>
 void TextureCache<P>::UploadImageContents(Image& image, StagingBuffer& staging) {
-    const std::span<u8> mapped_span = staging.mapped_span;
+    const std::span<u8> mapped_span = staging.mapped_span.first(MapSizeBytes(image));
     const GPUVAddr gpu_addr = image.gpu_addr;
 
-    if (True(image.flags & ImageFlagBits::AcceleratedUpload) && image.host_level_offset != 0) {
-        // Only levels >= host_level_offset exist on the host: read each layer's tail of the mip
-        // chain into a compact buffer (layer stride = that tail's size) and decode those levels.
-        auto uploads = FullUploadSwizzles(image.info);
-        const size_t level_offset = uploads[image.host_level_offset].buffer_offset;
-        const size_t tail = image.info.layer_stride - level_offset;
-        for (s32 layer = 0; layer < image.info.resources.layers; ++layer) {
-            gpu_memory->ReadBlock(gpu_addr + layer * image.info.layer_stride + level_offset,
-                                  mapped_span.data() + layer * tail, tail,
-                                  VideoCommon::CacheType::NoTextureCache);
-        }
-        uploads.erase(uploads.begin(), uploads.begin() + image.host_level_offset);
-        for (auto& upload : uploads) {
-            upload.buffer_offset -= level_offset;
-        }
-        runtime.AccelerateImageUpload(image, staging, uploads, 0, 0);
-        return;
-    }
     if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {
-        gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),
-                              VideoCommon::CacheType::NoTextureCache);
-        const auto uploads = FullUploadSwizzles(image.info);
+        auto uploads = FullUploadSwizzles(image.info);
+        {
+            UploadStatistics::Phase timer{upload_stats.read_ns};
+            if (image.host_level_offset != 0) {
+                const size_t level_offset = uploads[image.host_level_offset].buffer_offset;
+                const size_t tail = image.info.layer_stride - level_offset;
+                for (s32 layer = 0; layer < image.info.resources.layers; ++layer) {
+                    gpu_memory->ReadBlock(
+                        gpu_addr + static_cast<u64>(layer) * image.info.layer_stride + level_offset,
+                        mapped_span.data() + layer * tail, tail,
+                        VideoCommon::CacheType::NoTextureCache);
+                }
+                uploads.erase(uploads.begin(), uploads.begin() + image.host_level_offset);
+                for (auto& upload : uploads) {
+                    upload.buffer_offset -= level_offset;
+                }
+            } else {
+                gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),
+                                      VideoCommon::CacheType::NoTextureCache);
+            }
+        }
+        UploadStatistics::Phase timer{upload_stats.enqueue_ns};
         runtime.AccelerateImageUpload(image, staging, uploads, 0, 0);
         return;
     }
 
-    Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data(
-        *gpu_memory, gpu_addr, image.guest_size_bytes, &swizzle_data_buffer);
-    if (True(image.flags & ImageFlagBits::Converted)) {
-        unswizzle_data_buffer.resize_destructive(image.unswizzled_size_bytes);
-        auto copies = UnswizzleImage(*gpu_memory, gpu_addr, image.info, swizzle_data, unswizzle_data_buffer);
-        ConvertImage(unswizzle_data_buffer, image.info, mapped_span, copies);
-        image.UploadMemory(staging, copies);
-    } else {
-        const auto copies = UnswizzleImage(*gpu_memory, gpu_addr, image.info, swizzle_data, mapped_span);
-        image.UploadMemory(staging, copies);
-    }
+    auto swizzle_data = [&] {
+        UploadStatistics::Phase timer{upload_stats.read_ns};
+        return Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead>(
+            *gpu_memory, gpu_addr, image.guest_size_bytes, &swizzle_data_buffer);
+    }();
+    auto copies = [&] {
+        UploadStatistics::Phase timer{upload_stats.unswizzle_ns};
+        if (True(image.flags & ImageFlagBits::Converted)) {
+            unswizzle_data_buffer.resize_destructive(image.unswizzled_size_bytes);
+            auto result = UnswizzleImage(*gpu_memory, gpu_addr, image.info, swizzle_data,
+                                         unswizzle_data_buffer);
+            ConvertImage(unswizzle_data_buffer, image.info, mapped_span, result);
+            return result;
+        }
+        return UnswizzleImage(*gpu_memory, gpu_addr, image.info, swizzle_data, mapped_span);
+    }();
+    UploadStatistics::Phase timer{upload_stats.enqueue_ns};
+    image.UploadMemory(staging, copies);
 }
 
 template <class P>
@@ -3035,14 +3115,6 @@ void TextureCache<P>::PrepareImage(ImageId image_id, bool is_modification, bool 
                 // Layers over the image's memory cap stay unbacked (logged once).
                 BindSparseLayers(image, layers);
             }
-        }
-        if (True(image.flags & ImageFlagBits::UnwrittenSparse) &&
-            False(image.flags & ImageFlagBits::Remapped)) {
-            // The GPU renders into it: these writes are lost, later uses get a backed image.
-            LOG_WARNING(HW_GPU, "GPU write into unwritten sparse image {:#x}; replacing it",
-                        image.gpu_addr);
-            Tegra::Nx2SparseMarkWritten(image.gpu_addr, image.guest_size_bytes);
-            image.flags |= ImageFlagBits::CpuModified | ImageFlagBits::Remapped;
         }
         MarkModification(image);
     }

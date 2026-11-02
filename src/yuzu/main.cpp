@@ -23,6 +23,7 @@
 #endif
 
 #include "main_window.h"
+#include "common/fs/path_util.h"
 
 #ifdef _WIN32
 #include <QScreen>
@@ -78,6 +79,11 @@ static Qt::HighDpiScaleFactorRoundingPolicy GetHighDpiRoundingPolicy() {
 }
 
 int main(int argc, char* argv[]) {
+#ifdef __APPLE__
+    // Keep Metal validation enabled, but let the bundled driver's compiler turn
+    // validation exceptions into Vulkan pipeline errors instead of process aborts.
+    setenv("MTL_ERROR_MODE", "exception", 0);
+#endif
 #if YUZU_ROOM
     bool launch_room = false;
     for (int i = 1; i < argc; i++) {
@@ -110,6 +116,11 @@ int main(int argc, char* argv[]) {
     // Init settings params
     QCoreApplication::setOrganizationName(QStringLiteral("eden"));
     QCoreApplication::setApplicationName(QStringLiteral("Eglantine"));
+    QGuiApplication::setApplicationDisplayName(QStringLiteral("Dravyn"));
+    if (const auto profile = Common::FS::GetBundleProfileName(); !profile.empty()) {
+        QCoreApplication::setApplicationName(
+            QStringLiteral("Eglantine-") + QString::fromStdString(profile));
+    }
 
     // Increases the maximum open file limit.
     // TODO: This should be common to all frontends.

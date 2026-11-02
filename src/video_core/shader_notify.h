@@ -4,7 +4,6 @@
 #pragma once
 
 #include <atomic>
-#include <chrono>
 
 namespace VideoCore {
 class ShaderNotify {
@@ -22,10 +21,6 @@ public:
 private:
     std::atomic_int num_building{};
     std::atomic_int num_complete{};
-    int report_base{};
 
-    bool completed{};
-    int num_when_completed{};
-    std::chrono::steady_clock::time_point complete_time;
 };
 } // namespace VideoCore

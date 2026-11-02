@@ -21,12 +21,15 @@ GameGrid::GameGrid(QWidget* parent) : QListView{parent} {
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setFrameShape(QFrame::NoFrame);
+    setMouseTracking(true);
 
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setContextMenuPolicy(Qt::CustomContextMenu);
 
-    setSpacing(10);
+    setSpacing(0);
     setWordWrap(true);
     setTextElideMode(Qt::ElideRight);
     setFlow(QListView::LeftToRight);
@@ -55,50 +58,16 @@ void GameGrid::ApplyFilter(const QString& edit_filter_text, GameListModel* model
 }
 
 void GameGrid::UpdateIconSize() {
-    const u32 icon_size = UISettings::values.game_icon_size.GetValue();
-
-    int heightMargin = 0;
-    int widthMargin = 80;
-
-    if (UISettings::values.show_game_name) {
-        switch (icon_size) {
-        case 128:
-            heightMargin = 65;
-            break;
-        case 0:
-            widthMargin = 120;
-            heightMargin = 120;
-            break;
-        case 64:
-            heightMargin = 77;
-            break;
-        case 32:
-        case 256:
-            heightMargin = 81;
-            break;
-        }
-    } else {
-        widthMargin = 24;
-        heightMargin = 24;
-    }
-
-    const int view_width = viewport()->width();
-
-    const double spacing = 0.01;
-    const int min_item_width = icon_size + widthMargin;
-
-    int columns = std::max(1, (view_width - 16) / min_item_width);
-    int stretched_width = ((view_width) - (spacing * (columns - 1))) / columns;
-
-    QSize grid_size(stretched_width, icon_size + heightMargin);
-    if (gridSize() != grid_size) {
-        setUpdatesEnabled(false);
-
-        setGridSize(grid_size);
-        m_gameCard->setSize(grid_size, grid_size, stretched_width - min_item_width, columns);
-
-        setUpdatesEnabled(true);
-    }
+    const int icon_size = std::clamp<int>(UISettings::values.game_icon_size.GetValue(), 128, 320);
+    const int width = std::max(1, viewport()->width());
+    const int columns = std::max(1, width / (icon_size + 32));
+    const int cell_width = width / columns;
+    const int card_width = std::min(cell_width, icon_size + 32);
+    const int height = card_width + (UISettings::values.show_game_name ? 54 : 0);
+    const QSize cell_size(cell_width, height);
+    setGridSize(cell_size);
+    m_gameCard->setSize(cell_size, cell_size, cell_width - card_width, columns);
+    viewport()->update();
 }
 
 QModelIndex GameGrid::indexAt(const QPoint& point) const {

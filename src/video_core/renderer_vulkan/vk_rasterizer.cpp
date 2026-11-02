@@ -19,6 +19,8 @@
 #include "video_core/renderer_vulkan/renderer_vulkan.h"
 
 #include "common/assert.h"
+#include "common/fs/file.h"
+#include "common/fs/path_util.h"
 #include "shader_recompiler/exception.h"
 #include "common/logging.h"
 #include "common/scope_exit.h"
@@ -233,9 +235,29 @@ RasterizerVulkan::RasterizerVulkan(Core::Frontend::EmuWindow& emu_window_, Tegra
       fence_manager(*this, gpu, texture_cache, buffer_cache, query_cache, device, scheduler),
       wfi_event(device.GetLogical().CreateEvent()) {
     scheduler.SetQueryCache(query_cache);
+    if (std::getenv("EDEN_FRAME_TRACE") != nullptr) {
+        frame_trace_directory = Common::FS::GetEdenPath(Common::FS::EdenPath::DumpDir) / "draw-trace";
+        std::error_code error;
+        std::filesystem::create_directories(frame_trace_directory, error);
+        if (error) {
+            LOG_ERROR(HW_GPU, "Cannot create frame trace directory: {}", error.message());
+        } else {
+            frame_trace_writer = std::make_unique<Common::ThreadWorker>(1, "FrameTrace");
+            // The frame trace replaces the first-entry texture log in this mode.
+            texture_diagnostics_enabled = false;
+            BeginDrawTrace();
+            LOG_INFO(HW_GPU, "Frame trace enabled: directory={}, interval={}, files={}, byte_limit={}",
+                     frame_trace_directory.string(), VideoCommon::FrameTrace::SampleInterval,
+                     VideoCommon::FrameTrace::FileCount, VideoCommon::FrameTrace::DefaultByteLimit);
+        }
+    }
 }
 
 RasterizerVulkan::~RasterizerVulkan() {
+    if (frame_trace_writer) {
+        FlushDrawTrace(false);
+        frame_trace_writer->WaitForRequests();
+    }
     scheduler.WaitWorker();
     scheduler.Finish();
 }
@@ -261,7 +283,29 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         gpu_memory->FlushCaching();
     }
 
-    const auto report_failure = [&](std::string_view reason) {
+    const auto diagnostic_key = [&] {
+        const auto& regs = maxwell3d->regs;
+        return VideoCommon::DrawDiagnosticKey{
+            (u64{regs.pipelines[1].reserved[0] & 0xff} << 32) | regs.pipelines[1].reserved[1],
+            (u64{regs.pipelines[5].reserved[0] & 0xff} << 32) | regs.pipelines[5].reserved[1],
+            regs.rt[0].Address(), regs.rt[0].width, regs.rt[0].height,
+            pipeline_cache.GraphicsDiagnosticHash()};
+    };
+    const auto report_failure = [&](VideoCommon::DrawFailure failure) {
+        ReportDrawTrace(is_indexed, nullptr, failure);
+        const auto reason = VideoCommon::DrawFailureName(failure);
+        if (draw_diagnostics_enabled) {
+            const auto key = diagnostic_key();
+            if (draw_diagnostics.Skip(key, failure, diagnostic_frame)) {
+                const auto& draw = maxwell3d->draw_manager.draw_state;
+                LOG_WARNING(HW_GPU, "Draw diagnostic: skipped={} frame={} vs={:#x} ps={:#x} "
+                            "rt0={:#x} {}x{} key={:#x} depth={} indexed={} indices={} vertices={}",
+                            reason, diagnostic_frame, key[0], key[1], key[2], key[3], key[4], key[5],
+                            maxwell3d->regs.zeta_enable, is_indexed,
+                            draw.index_buffer.count, draw.vertex_buffer.count);
+            }
+            return;
+        }
         static std::set<std::tuple<u64, u64, std::string_view>> seen;
         const auto& regs = maxwell3d->regs;
         const u64 vs = (u64{regs.pipelines[1].reserved[0] & 0xff} << 32) | regs.pipelines[1].reserved[1];
@@ -276,14 +320,16 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         return pipeline_cache.CurrentGraphicsPipeline();
     }()};
     if (!pipeline) {
-        report_failure("no pipeline");
+        report_failure(pipeline_cache.GraphicsFailure());
         return;
     }
     std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
     // update engine as channel may be different.
     pipeline->SetEngine(maxwell3d, gpu_memory);
     if (Profile::Scope scope{Profile::Zone::Configure}; !pipeline->Configure(is_indexed)) {
-        report_failure("configure failed");
+        report_failure(pipeline->IsBuilt() && !pipeline->IsValid()
+                           ? VideoCommon::DrawFailure::BuildFailed
+                           : VideoCommon::DrawFailure::ConfigureFailed);
         return;
     }
 
@@ -300,6 +346,20 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         draw_func();
     }
     submitted = true;
+    ReportDrawTrace(is_indexed, pipeline, VideoCommon::DrawFailure::None);
+    if (texture_diagnostics_enabled) {
+        ReportDrawTextures(*pipeline);
+    }
+    if (draw_diagnostics_enabled && !draw_diagnostics.pending.empty()) {
+        const auto key = diagnostic_key();
+        if (const auto prior = draw_diagnostics.Submit(key)) {
+            LOG_INFO(HW_GPU, "Draw diagnostic: submission-after-skip frame={} vs={:#x} ps={:#x} "
+                     "rt0={:#x} {}x{} key={:#x} last_reason={} skipped={} frames_since_first={}",
+                     diagnostic_frame, key[0], key[1], key[2], key[3], key[4], key[5],
+                     VideoCommon::DrawFailureName(prior->reason), prior->skipped,
+                     diagnostic_frame - prior->first_frame);
+        }
+    }
     static u32 native_capture_count{};
     if (maxwell3d->GetNativeMacroEngine().native_turing &&
         native_capture_count < 16 && [] {
@@ -426,6 +486,10 @@ void TraceWindowTarget(const Tegra::Engines::Maxwell3D& maxwell3d, Tegra::Memory
 } // Anonymous namespace
 
 void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
+    if (frame_trace.Active()) {
+        frame_trace.Record(fmt::format("draw_call kind=direct next_draw={} instances={}",
+                                      frame_trace_draw, instance_count));
+    }
     VideoCommon::Nx2Profile::Scope profile_scope{VideoCommon::Nx2Profile::Zone::Draw};
     TraceWindowTarget(*maxwell3d, *gpu_memory, is_indexed ? "draw-indexed" : "draw",
                       is_indexed ? maxwell3d->draw_manager.draw_state.index_buffer.count
@@ -571,6 +635,12 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
 void RasterizerVulkan::DrawIndirect() {
     VideoCommon::Nx2Profile::Scope profile_scope{VideoCommon::Nx2Profile::Zone::Draw};
     const auto& params = maxwell3d->draw_manager.indirect_state;
+    if (frame_trace.Active()) {
+        frame_trace.Record(fmt::format("draw_call kind=indirect next_draw={} address={:#x} count_address={:#x} "
+                                      "max_draws={} stride={} byte_count={} include_count={}",
+                                      frame_trace_draw, params.indirect_start_address, params.count_start_address,
+                                      params.max_draw_counts, params.stride, params.is_byte_count, params.include_count));
+    }
     buffer_cache.SetDrawIndirect(&params);
     PrepareDraw(params.is_indexed, [this, &params] {
         const auto indirect_buffer = buffer_cache.GetDrawIndirectBuffer();
@@ -675,6 +745,14 @@ void RasterizerVulkan::DrawTexture() {
 }
 
 void RasterizerVulkan::Clear(u32 layer_count) {
+    if (frame_trace.Active()) {
+        const auto& regs = maxwell3d->regs;
+        frame_trace.Record(fmt::format("clear_request rt0={:#x} depth={:#x} mask={:#x} layers={} "
+                                      "color={},{},{},{} depth_value={}",
+                                      regs.rt[0].Address(), regs.zeta.Address(), regs.clear_surface.raw,
+                                      layer_count, regs.clear_color[0], regs.clear_color[1],
+                                      regs.clear_color[2], regs.clear_color[3], regs.clear_depth));
+    }
     VideoCommon::Nx2Profile::Scope profile_scope{VideoCommon::Nx2Profile::Zone::Clear};
     if (Tegra::Engines::g_nx2_trace_draws_after_upscale > 0) {
         const auto& regs = maxwell3d->regs;
@@ -878,15 +956,32 @@ void RasterizerVulkan::DispatchCompute() {
         if (kepler_compute->IsNativeMode()) throw Shader::RuntimeError("Native compute pipeline unavailable");
         return;
     }
+    const auto& qmd{kepler_compute->launch_description};
+    std::array<u32, 3> dim{qmd.grid_dim_x, qmd.grid_dim_y, qmd.grid_dim_z};
+    auto indirect_address = kepler_compute->GetIndirectComputeAddress();
+    if (indirect_address && pipeline->UsesStorageSharedMemory()) {
+        // Storage-backed shared memory needs the grid size before allocating its per-workgroup
+        // slices. ReadBlock synchronizes GPU writes before reading the indirect parameters.
+        gpu_memory->ReadBlock(*indirect_address, dim.data(), sizeof(dim),
+                              VideoCommon::CacheType::BufferCache);
+        indirect_address.reset();
+    }
+    if (!indirect_address) {
+        const auto max_dim = device.GetMaxComputeWorkGroupCount();
+        for (size_t i = 0; i < dim.size(); ++i) {
+            if (dim[i] == 0 || dim[i] > max_dim[i]) {
+                return;
+            }
+        }
+    }
+
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
     if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
-                             texture_cache)) {
+                             texture_cache, staging_pool, dim)) {
         if (kepler_compute->IsNativeMode()) throw Shader::RuntimeError("Native compute resources unavailable");
         return;
     }
 
-    const auto& qmd{kepler_compute->launch_description};
-    auto indirect_address = kepler_compute->GetIndirectComputeAddress();
     if (indirect_address) {
         // DispatchIndirect
         static constexpr auto sync_info = VideoCommon::ObtainBufferSynchronize::FullSynchronize;
@@ -901,11 +996,6 @@ void RasterizerVulkan::DispatchCompute() {
             }
             cmdbuf.DispatchIndirect(indirect_buffer, indirect_offset);
         });
-        return;
-    }
-    const std::array<u32, 3> dim{qmd.grid_dim_x, qmd.grid_dim_y, qmd.grid_dim_z};
-    const std::array<u32, 3> max_dim{device.GetMaxComputeWorkGroupCount()};
-    if (dim[0] > max_dim[0] || dim[1] > max_dim[1] || dim[2] > max_dim[2]) {
         return;
     }
     scheduler.RequestOutsideRenderPassOperationContext();
@@ -1191,7 +1281,205 @@ void RasterizerVulkan::FlushCommands() {
     scheduler.Flush();
 }
 
+void RasterizerVulkan::ReportDrawTrace(bool is_indexed, const GraphicsPipeline* pipeline,
+                                       VideoCommon::DrawFailure failure) {
+    if (!frame_trace.Active()) {
+        return;
+    }
+    const auto id = frame_trace_draw++;
+    const auto& regs = maxwell3d->regs;
+    const auto& draw = maxwell3d->draw_manager.draw_state;
+    frame_trace.Record(fmt::format(
+        "draw id={} status={} pipeline={:#x} topology={} indexed={} vertex_first={} vertices={} "
+        "index_address={:#x} index_limit={:#x} index_format={} index_first={} indices={} "
+        "base_index={} base_instance={} guest_instances={} inline_index_bytes={}",
+        id,
+        failure == VideoCommon::DrawFailure::None ? "submitted"
+                                                  : VideoCommon::DrawFailureName(failure),
+        pipeline_cache.GraphicsDiagnosticHash(), static_cast<u32>(draw.topology), is_indexed,
+        draw.vertex_buffer.first, draw.vertex_buffer.count, draw.index_buffer.StartAddress(),
+        draw.index_buffer.EndAddress(), static_cast<u32>(draw.index_buffer.format),
+        draw.index_buffer.first, draw.index_buffer.count, draw.base_index, draw.base_instance,
+        draw.instance_count, draw.inline_index_draw_indexes.size()));
+
+    frame_trace.RecordRegisters(id, regs.reg_array);
+    const auto shader_address = [&](size_t stage) {
+        return (u64{regs.pipelines[stage].reserved[0] & 0xff} << 32) |
+               regs.pipelines[stage].reserved[1];
+    };
+    frame_trace.Record(fmt::format(
+        "state draw={} vs={:#x} ps={:#x} rt0={:#x} width={} height={} layer={} format={} "
+        "depth={:#x} depth_test={} depth_write={} alpha_test={} rasterize={} color_mask0={:#x}",
+        id, shader_address(1), shader_address(5), regs.rt[0].Address(), regs.rt[0].width,
+        regs.rt[0].height, regs.rt[0].base_layer, static_cast<u32>(regs.rt[0].format),
+        regs.zeta.Address(), regs.depth_test_enable, regs.depth_write_enabled,
+        regs.alpha_test_enabled, regs.rasterize_enable, regs.color_mask[0].raw));
+
+    for (size_t stage = 0; stage < maxwell3d->state.shader_stages.size(); ++stage) {
+        const auto& buffers = maxwell3d->state.shader_stages[stage].const_buffers;
+        for (size_t bank = 0; bank < buffers.size(); ++bank) {
+            const auto& buffer = buffers[bank];
+            if (buffer.enabled) {
+                frame_trace.Record(
+                    fmt::format("cbuf draw={} stage={} bank={} address={:#x} size={}", id, stage,
+                                bank, buffer.address, buffer.size));
+            }
+        }
+    }
+    for (size_t slot = 0; slot < regs.vertex_streams.size(); ++slot) {
+        const auto& stream = regs.vertex_streams[slot];
+        if (stream.IsEnabled()) {
+            frame_trace.Record(
+                fmt::format("vertex draw={} slot={} address={:#x} stride={} frequency={}", id, slot,
+                            stream.Address(), stream.stride.Value(), stream.frequency));
+        }
+    }
+    if (!pipeline) {
+        // Failed draws have no resolved bindings; do not report stale views from a prior draw.
+        return;
+    }
+    size_t slot{};
+    for (const auto& binding : pipeline->DrawImageViews()) {
+        const auto& view = texture_cache.GetImageView(binding.id);
+        const auto& image = texture_cache.GetImage(view.image_id);
+        frame_trace.RecordImage(
+            id, slot++, binding.index,
+            fmt::format("view_address={:#x} image_address={:#x} cpu_address={:#x} "
+                        "guest_bytes={} flags={:#x} modification_tick={} host_mip_offset={} sparse_bytes={} "
+                        "type={} format={} width={} height={} mip={}+{} layer={}+{} aliases={} overlaps={}",
+                        view.gpu_addr, image.gpu_addr, image.cpu_addr, image.guest_size_bytes,
+                        static_cast<u32>(image.flags), image.modification_tick, image.host_level_offset,
+                        image.SparseBoundBytes(), static_cast<u32>(view.type), static_cast<u32>(view.format),
+                        view.size.width, view.size.height, view.range.base.level, view.range.extent.levels,
+                        view.range.base.layer, view.range.extent.layers, image.aliased_images.size(),
+                        image.overlapping_images.size()));
+    }
+}
+
+void RasterizerVulkan::FlushDrawTrace(bool frame_ended) {
+    auto trace = frame_trace.Finish(frame_ended);
+    if (!trace) {
+        return;
+    }
+    // Bound queued writes as well as each frame. Never wait for disk on the rendering thread.
+    if (frame_trace_pending.load() >= 2) {
+        LOG_WARNING(HW_GPU, "Frame trace {} dropped: writer busy", diagnostic_frame);
+        return;
+    }
+    const auto path = frame_trace_directory /
+                      fmt::format("frame-{:02}.trace",
+                                  frame_trace_sequence++ % VideoCommon::FrameTrace::FileCount);
+    ++frame_trace_pending;
+    frame_trace_writer->QueueWork([this, path, frame = diagnostic_frame, data = std::move(*trace)] {
+        SCOPE_EXIT {
+            --frame_trace_pending;
+        };
+        const auto temporary = std::filesystem::path{path.string() + ".tmp"};
+        const auto bytes =
+            Common::FS::WriteStringToFile(temporary, Common::FS::FileType::TextFile, data);
+        std::error_code error;
+        if (bytes == data.size()) {
+            std::filesystem::rename(temporary, path, error);
+        }
+        if (bytes != data.size() || error) {
+            LOG_ERROR(HW_GPU, "Frame trace {} write failed: bytes={}/{} error={}", frame, bytes,
+                      data.size(), error.message());
+            std::filesystem::remove(temporary, error);
+        } else {
+            LOG_INFO(HW_GPU, "Frame trace saved: frame={} bytes={} path={}", frame, bytes,
+                     path.string());
+        }
+    });
+}
+
+void RasterizerVulkan::BeginDrawTrace() {
+    if (diagnostic_frame % 60 == 0) {
+        std::error_code error;
+        if (std::filesystem::remove(frame_trace_directory / "capture.request", error)) {
+            frame_trace_burst = 6;
+            LOG_INFO(HW_GPU, "On-demand frame trace requested at frame {}", diagnostic_frame);
+        } else if (error) {
+            LOG_WARNING(HW_GPU, "Cannot check frame capture request: {}", error.message());
+        }
+    }
+    frame_trace.Begin(diagnostic_frame, frame_trace_burst != 0);
+    if (frame_trace_burst != 0) {
+        --frame_trace_burst;
+    }
+    frame_trace_draw = 0;
+}
+
+void RasterizerVulkan::ReportDrawTextures(const GraphicsPipeline& pipeline) {
+    if (texture_diagnostic_keys.size() >= MaxTextureDiagnosticEntries) {
+        return;
+    }
+    const auto& regs = maxwell3d->regs;
+    const auto& target = regs.rt[0];
+    const auto& viewport = regs.viewport_transform[0];
+    const u64 shader_key = pipeline_cache.GraphicsDiagnosticHash();
+    const u64 vs = (u64{regs.pipelines[1].reserved[0] & 0xff} << 32) |
+                   regs.pipelines[1].reserved[1];
+    const u64 ps = (u64{regs.pipelines[5].reserved[0] & 0xff} << 32) |
+                   regs.pipelines[5].reserved[1];
+    for (const auto& binding : pipeline.DrawImageViews()) {
+        const auto& view = texture_cache.GetImageView(binding.id);
+        const auto& range = view.range;
+        const std::array<u64, 8> key{
+            shader_key, target.Address(), target.base_layer, binding.index, view.gpu_addr,
+            (u64{static_cast<u32>(range.base.level)} << 32) | static_cast<u32>(range.base.layer),
+            (u64{static_cast<u32>(range.extent.levels)} << 32) | static_cast<u32>(range.extent.layers),
+            (u64{static_cast<u32>(view.type)} << 32) | static_cast<u32>(view.format)};
+        if (!texture_diagnostic_keys.insert(key).second) {
+            continue;
+        }
+        LOG_INFO(HW_GPU, "Draw texture: frame={} pipeline={:#x} vs={:#x} ps={:#x} rt0={:#x} {}x{} layer={} "
+                 "tic={} image={:#x} type={} format={} {}x{} levels={}+{} layers={}+{} "
+                 "viewport=({},{},{},{})",
+                 diagnostic_frame, shader_key, vs, ps, target.Address(), target.width, target.height,
+                 target.base_layer, binding.index, view.gpu_addr, static_cast<u32>(view.type),
+                 static_cast<u32>(view.format), view.size.width, view.size.height,
+                 range.base.level, range.extent.levels, range.base.layer, range.extent.layers,
+                 viewport.scale_x, viewport.scale_y, viewport.translate_x, viewport.translate_y);
+        if (texture_diagnostic_keys.size() == MaxTextureDiagnosticEntries) {
+            LOG_INFO(HW_GPU, "Draw texture diagnostic limit reached; resumes next 600-frame window");
+            break;
+        }
+    }
+}
+
 void RasterizerVulkan::TickFrame() {
+    if (frame_trace_writer) {
+        FlushDrawTrace(true);
+    }
+    if (draw_diagnostics_enabled || texture_diagnostics_enabled || frame_trace_writer) {
+        ++diagnostic_frame;
+    }
+    if (texture_diagnostics_enabled && diagnostic_frame % 600 == 0) {
+        texture_diagnostic_keys.clear();
+    }
+    if (draw_diagnostics_enabled && diagnostic_frame % 600 == 0) {
+        const auto& c = draw_diagnostics.counts;
+        LOG_INFO(HW_GPU, "Draw diagnostic window ending at frame {}: rejected={} translation={} "
+                 "build_failed={} pending_depth={} pending_large={} configure={} "
+                 "resubmitted={} unmatched_keys={} untracked_skips={} (64 event limit)",
+                 diagnostic_frame, c[1], c[2], c[3], c[4], c[5], c[6],
+                 draw_diagnostics.resubmitted, draw_diagnostics.pending.size(),
+                 draw_diagnostics.untracked);
+        size_t reported{};
+        for (const auto& [key, entry] : draw_diagnostics.pending) {
+            if (key[3] > 256 || key[4] > 256 || reported++ >= 8) {
+                continue;
+            }
+            LOG_INFO(HW_GPU, "Draw diagnostic: small target not resubmitted in this window: "
+                     "vs={:#x} ps={:#x} rt0={:#x} {}x{} key={:#x} reason={} skipped={}",
+                     key[0], key[1], key[2], key[3], key[4], key[5],
+                     VideoCommon::DrawFailureName(entry.reason), entry.skipped);
+        }
+        draw_diagnostics.ResetWindow();
+    }
+    if (frame_trace_writer) {
+        BeginDrawTrace();
+    }
     draw_counter = 0;
     guest_descriptor_queue.TickFrame();
     compute_pass_descriptor_queue.TickFrame();

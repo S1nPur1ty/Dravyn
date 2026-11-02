@@ -103,7 +103,7 @@
             <number>3</number>
            </property>
            <item>
-            <widget class="QPushButton" name="buttonRingAnalogPull">
+            <widget class="UIControls::Button" name="buttonRingAnalogPull">
              <property name="minimumSize">
               <size>
                <width>70</width>
@@ -152,7 +152,7 @@
             <number>3</number>
            </property>
            <item>
-            <widget class="QPushButton" name="buttonRingAnalogPush">
+            <widget class="UIControls::Button" name="buttonRingAnalogPush">
              <property name="minimumSize">
               <size>
                <width>70</width>
@@ -295,7 +295,7 @@
          </widget>
         </item>
         <item row="0" column="2">
-         <widget class="QPushButton" name="enable_ring_controller_button">
+         <widget class="UIControls::Button" name="enable_ring_controller_button">
           <property name="text">
            <string>Enable</string>
           </property>
@@ -339,7 +339,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="restore_defaults_button">
+      <widget class="UIControls::Button" name="restore_defaults_button">
        <property name="text">
         <string>Restore Defaults</string>
        </property>
@@ -356,6 +356,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

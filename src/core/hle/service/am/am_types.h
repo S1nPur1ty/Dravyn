@@ -94,7 +94,8 @@ enum class AppletId : u32 {
     LoginShare = 0x18,
     WebAuth = 0x19,
     MyPage = 0x1A,
-    Lhub = 0x35
+    Lhub = 0x35,
+    SoftwareKeyboardNx2 = 0x01020011,
 };
 
 enum class AppletProgramId : u64 {

@@ -140,7 +140,7 @@ inline void WriteDescriptorBuffer(const Device& device, const DescriptorBufferLa
            Shader::NumDescriptors(info.texture_buffer_descriptors) +
            Shader::NumDescriptors(info.image_buffer_descriptors) +
            Shader::NumDescriptors(info.texture_descriptors) +
-           Shader::NumDescriptors(info.image_descriptors);
+           Shader::NumDescriptors(info.image_descriptors) + (info.shared_memory_storage_size != 0);
 }
 
 class DescriptorLayoutBuilder {
@@ -273,32 +273,38 @@ public:
         Add(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, stage, info.image_buffer_descriptors);
         Add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stage, info.texture_descriptors);
         Add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, stage, info.image_descriptors);
+        if (info.shared_memory_storage_size) {
+            AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage, 1);
+        }
     }
 
 private:
     template <typename Descriptors>
     void Add(VkDescriptorType type, VkShaderStageFlags stage, const Descriptors& descriptors) {
-        const size_t num{descriptors.size()};
-        for (size_t i = 0; i < num; ++i) {
-            bindings.push_back({
-                .binding = binding,
-                .descriptorType = type,
-                .descriptorCount = descriptors[i].count,
-                .stageFlags = stage,
-                .pImmutableSamplers = nullptr,
-            });
-            entries.push_back({
-                .dstBinding = binding,
-                .dstArrayElement = 0,
-                .descriptorCount = descriptors[i].count,
-                .descriptorType = type,
-                .offset = offset,
-                .stride = sizeof(DescriptorUpdateEntry),
-            });
-            ++binding;
-            num_descriptors += descriptors[i].count;
-            offset += sizeof(DescriptorUpdateEntry) * descriptors[i].count;
+        for (const auto& descriptor : descriptors) {
+            AddBinding(type, stage, descriptor.count);
         }
+    }
+
+    void AddBinding(VkDescriptorType type, VkShaderStageFlags stage, u32 count) {
+        bindings.push_back({
+            .binding = binding,
+            .descriptorType = type,
+            .descriptorCount = count,
+            .stageFlags = stage,
+            .pImmutableSamplers = nullptr,
+        });
+        entries.push_back({
+            .dstBinding = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = count,
+            .descriptorType = type,
+            .offset = offset,
+            .stride = sizeof(DescriptorUpdateEntry),
+        });
+        ++binding;
+        num_descriptors += count;
+        offset += sizeof(DescriptorUpdateEntry) * count;
     }
 
     const Device* device{};

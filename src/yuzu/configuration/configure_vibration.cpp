@@ -7,10 +7,12 @@
 #include "hid_core/hid_types.h"
 #include "ui_configure_vibration.h"
 #include "yuzu/configuration/configure_vibration.h"
+#include "yuzu/configuration/style.h"
 
 ConfigureVibration::ConfigureVibration(QWidget* parent, Core::HID::HIDCore& hid_core_)
     : QDialog(parent), ui(std::make_unique<Ui::ConfigureVibration>()), hid_core{hid_core_} {
     ui->setupUi(this);
+    ConfigurationShared::ApplyDialogStyle(this);
 
     vibration_groupboxes = {
         ui->vibrationGroupPlayer1, ui->vibrationGroupPlayer2, ui->vibrationGroupPlayer3,

@@ -4,11 +4,24 @@
 // SPDX-FileCopyrightText: 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <chrono>
+#include "common/logging.h"
 #include "video_core/host1x/syncpoint_manager.h"
 
 namespace Tegra {
 
 namespace Host1x {
+
+bool SyncpointManager::ValidateId(u32 id) {
+    if (id < NUM_MAX_SYNCPOINTS) {
+        return true;
+    }
+    static std::atomic<u32> reports{};
+    if (reports.fetch_add(1, std::memory_order_relaxed) < 16) {
+        LOG_ERROR(HW_GPU, "Invalid syncpoint ID {}; rejecting out-of-range GPU command", id);
+    }
+    return false;
+}
 
 SyncpointManager::ActionHandle SyncpointManager::RegisterAction(
     std::atomic<u32>& syncpoint, std::list<RegisteredAction>& action_storage, u32 expected_value,
@@ -50,27 +63,72 @@ void SyncpointManager::DeregisterAction(std::list<RegisteredAction>& action_stor
 }
 
 void SyncpointManager::DeregisterGuestAction(u32 syncpoint_id, const ActionHandle& handle) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     DeregisterAction(guest_action_storage[syncpoint_id], handle);
 }
 
 void SyncpointManager::DeregisterHostAction(u32 syncpoint_id, const ActionHandle& handle) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     DeregisterAction(host_action_storage[syncpoint_id], handle);
 }
 
 void SyncpointManager::IncrementGuest(u32 syncpoint_id) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     Increment(syncpoints_guest[syncpoint_id], wait_guest_cv, guest_action_storage[syncpoint_id]);
 }
 
 void SyncpointManager::IncrementHost(u32 syncpoint_id) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     Increment(syncpoints_host[syncpoint_id], wait_host_cv, host_action_storage[syncpoint_id]);
 }
 
 void SyncpointManager::WaitGuest(u32 syncpoint_id, u32 expected_value) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     Wait(syncpoints_guest[syncpoint_id], wait_guest_cv, expected_value);
 }
 
 void SyncpointManager::WaitHost(u32 syncpoint_id, u32 expected_value) {
+    if (!ValidateId(syncpoint_id)) {
+        return;
+    }
     Wait(syncpoints_host[syncpoint_id], wait_host_cv, expected_value);
+}
+
+bool SyncpointManager::WaitGuestInterruptible(u32 syncpoint_id, u32 expected_value,
+                                             const std::function<bool()>& cancelled,
+                                             const std::function<void()>& on_stall) {
+    if (!ValidateId(syncpoint_id)) {
+        return false;
+    }
+    using namespace std::chrono_literals;
+    auto next_report = std::chrono::steady_clock::now() + 4s;
+    const auto ready = [&] {
+        return syncpoints_guest[syncpoint_id].load(std::memory_order_acquire) >= expected_value;
+    };
+    while (!cancelled()) {
+        std::unique_lock lock{guard};
+        if (wait_guest_cv.wait_for(lock, 50ms, ready)) {
+            return !cancelled();
+        }
+        lock.unlock();
+        if (const auto now = std::chrono::steady_clock::now(); now >= next_report) {
+            if (on_stall) {
+                on_stall();
+            }
+            next_report = now + 4s;
+        }
+    }
+    return false;
 }
 
 void SyncpointManager::Increment(std::atomic<u32>& syncpoint, std::condition_variable& wait_cv,

@@ -32,6 +32,7 @@
 #include "core/hle/service/filesystem/filesystem.h"
 #include "ui_configure_profile_manager.h"
 #include "yuzu/configuration/configure_profile_manager.h"
+#include "yuzu/configuration/style.h"
 #include "yuzu/util/limitable_input_dialog.h"
 
 namespace {
@@ -54,11 +55,11 @@ QString GetAccountUsername(const Service::Account::ProfileManager& manager, Comm
     return QString::fromStdString(text);
 }
 
-QString FormatUserEntryText(const QString& username, Common::UUID uuid) {
-    return ConfigureProfileManager::tr("%1\n%2",
-                                       "%1 is the profile username, %2 is the formatted UUID (e.g. "
-                                       "00112233-4455-6677-8899-AABBCCDDEEFF))")
-        .arg(username, QString::fromStdString(uuid.FormattedString()));
+QStandardItem* MakeUserEntry(const QPixmap& icon, const QString& username, Common::UUID uuid) {
+    auto* item = new QStandardItem(ConfigurationShared::RoundedAvatar(icon), username);
+    item->setToolTip(ConfigureProfileManager::tr("Profile ID: %1")
+                         .arg(QString::fromStdString(uuid.FormattedString())));
+    return item;
 }
 
 QPixmap GetIcon(const Common::UUID& uuid) {
@@ -79,17 +80,24 @@ ConfigureProfileManager::ConfigureProfileManager(Core::System& system_, QWidget*
     : QWidget(parent), ui{std::make_unique<Ui::ConfigureProfileManager>()},
       profile_manager{system_.GetProfileManager()}, system{system_} {
     ui->setupUi(this);
+    ui->verticalLayout->setAlignment(Qt::AlignTop);
+    ui->gridGroupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
     tree_view = new QTreeView;
     item_model = new QStandardItemModel(tree_view);
     item_model->insertColumns(0, 1);
     tree_view->setModel(item_model);
-    tree_view->setAlternatingRowColors(true);
+    tree_view->setAlternatingRowColors(false);
+    tree_view->setObjectName(QStringLiteral("ProfileList"));
+    tree_view->setHeaderHidden(true);
+    tree_view->setRootIsDecorated(false);
+    tree_view->setMinimumHeight(100);
+    tree_view->setMaximumHeight(280);
     tree_view->setSelectionMode(QHeaderView::SingleSelection);
     tree_view->setSelectionBehavior(QHeaderView::SelectRows);
     tree_view->setVerticalScrollMode(QHeaderView::ScrollPerPixel);
     tree_view->setHorizontalScrollMode(QHeaderView::ScrollPerPixel);
-    tree_view->setSortingEnabled(true);
+    tree_view->setSortingEnabled(false);
     tree_view->setEditTriggers(QHeaderView::NoEditTriggers);
     tree_view->setUniformRowHeights(true);
     tree_view->setIconSize({64, 64});
@@ -104,7 +112,7 @@ ConfigureProfileManager::ConfigureProfileManager(Core::System& system_, QWidget*
     layout->setSpacing(0);
     layout->addWidget(tree_view);
 
-    ui->scrollArea->setLayout(layout);
+    ui->profile_list_container->setLayout(layout);
 
     connect(tree_view, &QTreeView::customContextMenuRequested, this,
             &ConfigureProfileManager::showContextMenu);
@@ -117,7 +125,8 @@ ConfigureProfileManager::ConfigureProfileManager(Core::System& system_, QWidget*
     connect(confirm_dialog, &ConfigureProfileManagerDeleteDialog::deleteUser, this,
             &ConfigureProfileManager::DeleteUser);
 
-    scene = new QGraphicsScene;
+    scene = new QGraphicsScene(this);
+    ui->current_user_icon->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
     ui->current_user_icon->setScene(scene);
 
     RetranslateUI();
@@ -160,8 +169,7 @@ void ConfigureProfileManager::PopulateUserList() {
         const auto username = Common::StringFromFixedZeroTerminatedBuffer(
             reinterpret_cast<const char*>(profile.username.data()), profile.username.size());
 
-        list_items.push_back(QList<QStandardItem*>{new QStandardItem{
-            GetIcon(user), FormatUserEntryText(QString::fromStdString(username), user)}});
+        list_items.push_back(QList<QStandardItem*>{MakeUserEntry(GetIcon(user), QString::fromStdString(username), user)});
     }
 
     for (const auto& item : list_items)
@@ -177,7 +185,7 @@ void ConfigureProfileManager::UpdateCurrentUser() {
 
     scene->clear();
     scene->addPixmap(
-        GetIcon(*current_user).scaled(64, 64, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        ConfigurationShared::RoundedAvatar(GetIcon(*current_user)));
     ui->current_user_username->setText(username);
 }
 
@@ -259,7 +267,7 @@ void ConfigureProfileManager::AddUser() {
 
         profile_manager.CreateNewUser(uuid, username.toStdString());
         profile_manager.WriteUserSaveFile();
-        item_model->appendRow(new QStandardItem{pixmap, FormatUserEntryText(username, uuid)});
+        item_model->appendRow(MakeUserEntry(pixmap, username, uuid));
 
         saveImage(pixmap, uuid);
         UpdateCurrentUser();
@@ -308,8 +316,7 @@ void ConfigureProfileManager::EditUser() {
 
                 item_model->setItem(
                     user_idx, 0,
-                    new QStandardItem{pixmap, FormatUserEntryText(
-                                                  QString::fromStdString(username_std), uuid_val)});
+                    MakeUserEntry(pixmap, QString::fromStdString(username_std), uuid_val));
 
                 saveImage(pixmap, uuid_val);
                 UpdateCurrentUser();

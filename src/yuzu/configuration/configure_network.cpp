@@ -22,7 +22,9 @@ ConfigureNetwork::ConfigureNetwork(const Core::System& system_, QWidget* parent)
 ConfigureNetwork::~ConfigureNetwork() = default;
 
 void ConfigureNetwork::ApplyConfiguration() {
-    Settings::values.network_interface = ui->network_interface->currentText().toStdString();
+    if (ui->network_interface->currentIndex() >= 0) {
+        Settings::values.network_interface = ui->network_interface->currentText().toStdString();
+    }
     Settings::values.airplane_mode = ui->airplane_mode->isChecked();
 }
 
@@ -36,6 +38,7 @@ void ConfigureNetwork::changeEvent(QEvent* event) {
 
 void ConfigureNetwork::RetranslateUI() {
     ui->retranslateUi(this);
+    ui->network_interface->setPlaceholderText(tr("No network interfaces available"));
 }
 
 void ConfigureNetwork::SetConfiguration() {
@@ -43,6 +46,7 @@ void ConfigureNetwork::SetConfiguration() {
     auto const network_interface = Settings::values.network_interface.GetValue();
     auto const airplane_mode = Settings::values.airplane_mode.GetValue();
     ui->network_interface->setCurrentText(QString::fromStdString(network_interface));
-    ui->network_interface->setEnabled(runtime_lock);
+    ui->network_interface->setPlaceholderText(tr("No network interfaces available"));
+    ui->network_interface->setEnabled(runtime_lock && ui->network_interface->count() > 0);
     ui->airplane_mode->setChecked(airplane_mode);
 }

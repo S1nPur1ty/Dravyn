@@ -508,7 +508,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer4Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer4Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -532,7 +532,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer4Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer4Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -705,7 +705,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer2Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer2Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -729,7 +729,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer2Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer2Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -906,7 +906,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer1Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer1Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -935,7 +935,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer1Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer1Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -1216,7 +1216,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer3Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer3Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -1240,7 +1240,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer3Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer3Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -1453,7 +1453,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer7Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer7Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -1477,7 +1477,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer7Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer7Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -1650,7 +1650,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer8Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer8Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -1674,7 +1674,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer8Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer8Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -1851,7 +1851,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer5Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer5Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -1875,7 +1875,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer5Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer5Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -2048,7 +2048,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer6Emulated">
+               <widget class="UIControls::ComboBox" name="comboPlayer6Emulated">
                 <item>
                  <property name="text">
                   <string>Pro Controller</string>
@@ -2072,7 +2072,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboPlayer6Profile">
+               <widget class="UIControls::ComboBox" name="comboPlayer6Profile">
                 <item>
                  <property name="text">
                   <string>Use Current Config</string>
@@ -2329,7 +2329,7 @@
              <number>3</number>
             </property>
             <item>
-             <widget class="QPushButton" name="vibrationButton">
+             <widget class="UIControls::Button" name="vibrationButton">
               <property name="minimumSize">
                <size>
                 <width>68</width>
@@ -2375,7 +2375,7 @@
              <number>3</number>
             </property>
             <item>
-             <widget class="QPushButton" name="motionButton">
+             <widget class="UIControls::Button" name="motionButton">
               <property name="minimumSize">
                <size>
                 <width>68</width>
@@ -2418,7 +2418,7 @@
              <number>3</number>
             </property>
             <item>
-             <widget class="QPushButton" name="inputConfigButton">
+             <widget class="UIControls::Button" name="inputConfigButton">
               <property name="maximumSize">
                <size>
                 <width>68</width>
@@ -2681,6 +2681,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

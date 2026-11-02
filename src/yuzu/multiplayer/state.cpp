@@ -21,6 +21,13 @@
 #include "yuzu/multiplayer/state.h"
 #include "yuzu/util/clickable_label.h"
 
+namespace {
+QPixmap StatusIcon(const QString& name, qreal scale) {
+    return QIcon(QStringLiteral(":/library/network-%1.svg").arg(name))
+        .pixmap(QSize(18, 18), scale);
+}
+} // namespace
+
 MultiplayerState::MultiplayerState(QWidget* parent, QStandardItemModel* game_list_model_,
                                    QAction* leave_room_, QAction* show_room_, Core::System& system_)
     : QWidget(parent), game_list_model(game_list_model_), leave_room(leave_room_),
@@ -46,6 +53,12 @@ MultiplayerState::MultiplayerState(QWidget* parent, QStandardItemModel* game_lis
 
     status_text = new ClickableLabel(this);
     status_icon = new ClickableLabel(this);
+    status_icon->setFixedSize(28, 28);
+    status_icon->setAlignment(Qt::AlignCenter);
+    status_icon->setCursor(Qt::PointingHandCursor);
+    status_text->setMinimumHeight(28);
+    status_text->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+    status_text->setCursor(Qt::PointingHandCursor);
 
     connect(status_text, &ClickableLabel::clicked, this, &MultiplayerState::OnOpenNetworkRoom);
     connect(status_icon, &ClickableLabel::clicked, this, &MultiplayerState::OnOpenNetworkRoom);
@@ -113,29 +126,37 @@ void MultiplayerState::SetNotificationStatus(NotificationStatus status) {
 }
 
 void MultiplayerState::UpdateNotificationStatus() {
+    const bool connected = notification_status == NotificationStatus::Connected ||
+                           notification_status == NotificationStatus::Notification;
+    const QString description = connected ? tr("Connected — open room") : tr("Not connected — find a room");
+    status_text->setToolTip(description);
+    status_icon->setToolTip(description);
+    status_text->setAccessibleName(description);
+    status_icon->setAccessibleName(description);
+    status_text->setStyleSheet(connected ? QStringLiteral("color: #56cf92;") : QString{});
     switch (notification_status) {
     case NotificationStatus::Uninitialized:
-        status_icon->setPixmap(QIcon::fromTheme(QStringLiteral("disconnected")).pixmap(16));
-        status_text->setText(tr("Not Connected. Click here to find a room!"));
+        status_icon->setPixmap(StatusIcon(QStringLiteral("disconnected"), status_icon->devicePixelRatioF()));
+        status_text->setText(tr("Network"));
         leave_room->setEnabled(false);
         show_room->setEnabled(false);
         break;
     case NotificationStatus::Disconnected:
-        status_icon->setPixmap(QIcon::fromTheme(QStringLiteral("disconnected")).pixmap(16));
-        status_text->setText(tr("Not Connected"));
+        status_icon->setPixmap(StatusIcon(QStringLiteral("disconnected"), status_icon->devicePixelRatioF()));
+        status_text->setText(tr("Network"));
         leave_room->setEnabled(false);
         show_room->setEnabled(false);
         break;
     case NotificationStatus::Connected:
-        status_icon->setPixmap(QIcon::fromTheme(QStringLiteral("connected")).pixmap(16));
-        status_text->setText(tr("Connected"));
+        status_icon->setPixmap(StatusIcon(QStringLiteral("connected"), status_icon->devicePixelRatioF()));
+        status_text->setText(tr("Network"));
         leave_room->setEnabled(true);
         show_room->setEnabled(true);
         break;
     case NotificationStatus::Notification:
         status_icon->setPixmap(
-            QIcon::fromTheme(QStringLiteral("connected_notification")).pixmap(16));
-        status_text->setText(tr("New Messages Received"));
+            StatusIcon(QStringLiteral("connected_notification"), status_icon->devicePixelRatioF()));
+        status_text->setText(tr("Network"));
         leave_room->setEnabled(true);
         show_room->setEnabled(true);
         break;
@@ -220,13 +241,13 @@ void MultiplayerState::OnSaveConfig() {
 void MultiplayerState::UpdateThemedIcons() {
     if (show_notification) {
         status_icon->setPixmap(
-            QIcon::fromTheme(QStringLiteral("connected_notification")).pixmap(16));
+            StatusIcon(QStringLiteral("connected_notification"), status_icon->devicePixelRatioF()));
     } else if (current_state == Network::RoomMember::State::Joined ||
                current_state == Network::RoomMember::State::Moderator) {
 
-        status_icon->setPixmap(QIcon::fromTheme(QStringLiteral("connected")).pixmap(16));
+        status_icon->setPixmap(StatusIcon(QStringLiteral("connected"), status_icon->devicePixelRatioF()));
     } else {
-        status_icon->setPixmap(QIcon::fromTheme(QStringLiteral("disconnected")).pixmap(16));
+        status_icon->setPixmap(StatusIcon(QStringLiteral("disconnected"), status_icon->devicePixelRatioF()));
     }
     if (client_room)
         client_room->UpdateIconDisplay();

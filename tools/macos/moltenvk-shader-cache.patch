@@ -1,0 +1,205 @@
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm b/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
+index b1a90f4..56146c7 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKDevice.mm
+@@ -2305,6 +2305,7 @@
+ 	initExternalMemoryProperties();
+ 	initCounterSets();
+ 	initVkSemaphoreStyle();
++	initPipelineCacheUUID();
+ 	logGPUInfo();
+ }
+ 
+@@ -2339,7 +2340,7 @@
+ #endif  // MVK_MACOS
+ }
+ 
+-// Initializes the physical device properties (except limits).
++// Initializes the physical device properties (except limits and pipeline cache identity).
+ void MVKPhysicalDevice::initProperties() {
+ 	mvkClear(&_properties);	// Start with everything cleared
+ 
+@@ -2347,7 +2348,6 @@
+ 	_properties.driverVersion = MVK_VERSION;
+ 
+ 	initGPUInfoProperties();
+-	initPipelineCacheUUID();
+ }
+ 
+ // Initializes the Metal-specific physical device features of this instance.
+@@ -3178,7 +3178,7 @@ static uint32_t mvkGetEntryProperty(io_registry_entry_t entry, CFStringRef prope
+ void MVKPhysicalDevice::initPipelineCacheUUID() {
+ 
+ 	// Clear the UUID
+-	mvkClear(&_properties.pipelineCacheUUID, VK_UUID_SIZE);
++	mvkClear(_properties.pipelineCacheUUID, VK_UUID_SIZE);
+ 
+ 	size_t uuidComponentOffset = 0;
+ 
+@@ -3198,8 +3198,12 @@ static uint32_t mvkGetEntryProperty(io_registry_entry_t entry, CFStringRef prope
+ 	// might affect the contents of the pipeline cache (mostly MSL content).
+ 	uint32_t mtlFeatures = 0;
+ 	mtlFeatures |= _isUsingMetalArgumentBuffers << 0;
++	mtlFeatures |= 1U << 1;  // Corrected MSL subgroup fence spelling.
+ 	*(uint32_t*)&_properties.pipelineCacheUUID[uuidComponentOffset] = NSSwapHostIntToBig(mtlFeatures);
+ 	uuidComponentOffset += sizeof(mtlFeatures);
++
++	// Shader language changes alter texture atomic translation and resource bindings.
++	*(uint32_t*)&_properties.pipelineCacheUUID[uuidComponentOffset] = NSSwapHostIntToBig(_metalFeatures.mslVersion);
+ }
+ 
+ // Combine OS major (8 bits), OS minor (8 bits), Mac GPU family (8 bits), and
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKPipeline.mm b/MoltenVK/MoltenVK/GPUObjects/MVKPipeline.mm
+index 071ff71..78abe97 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKPipeline.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKPipeline.mm
+@@ -3050,11 +3050,21 @@ void serialize(Archive & archive, MVKCompressor<C>& comp) {
+ 	compile(lock, ^{
+ 		auto mtlDev = getMTLDevice();
+ 		@synchronized (mtlDev) {
++			@try {
+ 			[mtlDev newRenderPipelineStateWithDescriptor: mtlRPLDesc
+ 									   completionHandler: ^(id<MTLRenderPipelineState> ps, NSError* error) {
+ 										   bool isLate = compileComplete(ps, error);
+ 										   if (isLate) { destroy(); }
+ 									   }];
++			} @catch (NSException* exception) {
++				// The host selects Metal's exception error mode. Preserve validation
++				// failures as pipeline errors, including the otherwise private reason.
++				NSString* reason = exception.reason ?: exception.name;
++				NSError* error = [NSError errorWithDomain:@"MVKMetalPipelineValidation"
++					code:1 userInfo:@{NSLocalizedDescriptionKey: reason}];
++				bool isLate = compileComplete(nil, error);
++				if (isLate) { destroy(); }
++			}
+ 		}
+ 	});
+ 
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.h b/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.h
+index c76c3d1..6076c53 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.h
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.h
+@@ -122,7 +122,7 @@ public:
+ 	MVKShaderLibrary(MVKVulkanAPIDeviceObject* owner,
+ 					 const mvk::SPIRVToMSLConversionResultInfo& resultInfo,
+ 					 const MVKCompressor<std::string> compressedMSL,
+-					 const std::vector<std::pair<uint32_t, MVKShaderMacroValue>>* specializationMacroDef = nullptr);
++					 const std::vector<std::pair<uint32_t, MVKShaderMacroValue>>* specializationMacroDef = nullptr, bool deferCompilation = false);
+ 
+ 	MVKShaderLibrary(MVKVulkanAPIDeviceObject* owner,
+ 					 const void* mslCompiledCodeData,
+@@ -151,7 +151,9 @@ protected:
+ 	MVKCompressor<std::string>& getCompressedMSL() { return _compressedMSL; }
+ 
+ 	MVKVulkanAPIDeviceObject* _owner;
+-	id<MTLLibrary> _mtlLibrary;
++	id<MTLLibrary> _mtlLibrary = nil;
++	bool _needsCompile = false;
++	mutable std::mutex _compilationLock;
+ 	MVKCompressor<std::string> _compressedMSL;
+ 	mvk::SPIRVToMSLConversionResultInfo _shaderConversionResultInfo;
+ 
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.mm b/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.mm
+index a75dfb6..4f1d8b4 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.mm
+@@ -73,6 +73,14 @@ static uint32_t getWorkgroupDimensionSize(const SPIRVWorkgroupSizeDimension& wgD
+ 												VkPipelineCreationFeedback* pShaderFeedback,
+ 												MVKShaderModule* shaderModule) {
+ 
++	// Restored source is compiled once on first use, outside the pipeline-cache lock.
++	lock_guard<mutex> lock(_compilationLock);
++	if (_needsCompile) {
++		_needsCompile = false;
++		string msl;
++		decompressMSL(msl);
++		compileLibrary(msl);
++	}
+ 	if ( !_mtlLibrary ) { return MVKMTLFunctionNull; }
+ 
+ 	id<MTLLibrary> lib = _mtlLibrary;
+@@ -213,16 +221,20 @@ static uint32_t getWorkgroupDimensionSize(const SPIRVWorkgroupSizeDimension& wgD
+ MVKShaderLibrary::MVKShaderLibrary(MVKVulkanAPIDeviceObject* owner,
+ 								   const SPIRVToMSLConversionResultInfo& resultInfo,
+ 								   const MVKCompressor<std::string> compressedMSL,
+-								   const vector<pair<uint32_t, MVKShaderMacroValue> >* specializationMacroDef) :
++								   const vector<pair<uint32_t, MVKShaderMacroValue> >* specializationMacroDef,
++                                   bool deferCompilation) :
+ 	MVKBaseDeviceObject(owner->getDevice()),
+ 	_owner(owner),
+ 	_maySpecializeWithMacro(specializationMacroDef == nullptr) {
+ 
+ 	_shaderConversionResultInfo = resultInfo;
+ 	_compressedMSL = compressedMSL;
+-	string msl;
+-	decompressMSL(msl);
+-	compileLibrary(msl, specializationMacroDef);
++	_needsCompile = deferCompilation && !specializationMacroDef;
++	if (!_needsCompile) {
++		string msl;
++		decompressMSL(msl);
++		compileLibrary(msl, specializationMacroDef);
++	}
+ }
+ 
+ void MVKShaderLibrary::compileLibrary(const string& msl,
+@@ -267,25 +279,27 @@ static uint32_t getWorkgroupDimensionSize(const SPIRVWorkgroupSizeDimension& wgD
+ 	addPerformanceInterval(getPerformanceStats().shaderCompilation.mslLoad, startTime);
+ }
+ 
+-MVKShaderLibrary::MVKShaderLibrary(const MVKShaderLibrary& other) :
+-	MVKBaseDeviceObject(other._device),
+-	_owner(other._owner),
+-	_maySpecializeWithMacro(other._maySpecializeWithMacro),
+-	_specializationVariants(other._specializationVariants) {
+ 
+-	_mtlLibrary = [other._mtlLibrary retain];
+-	_shaderConversionResultInfo = other._shaderConversionResultInfo;
+-	_compressedMSL = other._compressedMSL;
++MVKShaderLibrary::MVKShaderLibrary(const MVKShaderLibrary& other) :
++	MVKBaseDeviceObject(other._device) {
++	*this = other;
+ }
+ 
+ MVKShaderLibrary& MVKShaderLibrary::operator=(const MVKShaderLibrary& other) {
+-	if (_mtlLibrary != other._mtlLibrary) {
+-		[_mtlLibrary release];
+-		_mtlLibrary = [other._mtlLibrary retain];
+-	}
++	if (this == &other) { return *this; }
++	std::scoped_lock lock(_compilationLock, other._compilationLock);
++	[_mtlLibrary release];
++	_mtlLibrary = [other._mtlLibrary retain];
+ 	_owner = other._owner;
+ 	_shaderConversionResultInfo = other._shaderConversionResultInfo;
+ 	_compressedMSL = other._compressedMSL;
++	_needsCompile = other._needsCompile;
++	_maySpecializeWithMacro = other._maySpecializeWithMacro;
++	for (auto& item : _specializationVariants) { delete item.second; }
++	_specializationVariants.clear();
++	for (auto& item : other._specializationVariants) {
++		_specializationVariants.emplace(item.first, new MVKShaderLibrary(*item.second));
++	}
+ 	return *this;
+ }
+ 
+@@ -323,6 +337,10 @@ static uint32_t getWorkgroupDimensionSize(const SPIRVWorkgroupSizeDimension& wgD
+ 														  uint64_t startTime) {
+ 	bool wasAdded = false;
+ 	MVKShaderLibrary* shLib = findShaderLibrary(pShaderConfig, pShaderFeedback, startTime);
++	if (shLib && pipeline->shouldFailOnPipelineCompileRequired()) {
++		lock_guard<mutex> lock(shLib->_compilationLock);
++		if (shLib->_needsCompile) { return nullptr; }
++	}
+ 	if ( !shLib && !pipeline->shouldFailOnPipelineCompileRequired() ) {
+ 		SPIRVToMSLConversionResult conversionResult;
+ 		if (shaderModule->convert(pShaderConfig, conversionResult)) {
+@@ -369,7 +387,7 @@ static uint32_t getWorkgroupDimensionSize(const SPIRVWorkgroupSizeDimension& wgD
+ MVKShaderLibrary* MVKShaderLibraryCache::addShaderLibrary(const SPIRVToMSLConversionConfiguration* pShaderConfig,
+ 														  const SPIRVToMSLConversionResultInfo& resultInfo,
+ 														  const MVKCompressor<std::string> compressedMSL) {
+-	MVKShaderLibrary* shLib = new MVKShaderLibrary(_owner, resultInfo, compressedMSL);
++	MVKShaderLibrary* shLib = new MVKShaderLibrary(_owner, resultInfo, compressedMSL, nullptr, true);
+ 	_shaderLibraries.emplace_back(*pShaderConfig, shLib);
+ 	return shLib;
+ }

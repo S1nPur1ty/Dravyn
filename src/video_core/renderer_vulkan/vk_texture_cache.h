@@ -55,6 +55,10 @@ public:
 
     StagingBufferRef UploadStagingBuffer(size_t size, bool deferred = false);
 
+    bool UseBoundedTextureUploads() const;
+    StagingBufferRef StreamUploadStagingBuffer(size_t size);
+    void CommitStreamUpload();
+
     StagingBufferRef DownloadStagingBuffer(size_t size, bool deferred = false);
 
     void FreeDeferredStagingBuffer(StagingBufferRef& ref);

@@ -53,7 +53,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="game_list"/>
+         <widget class="UIControls::ComboBox" name="game_list"/>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_2">
@@ -178,7 +178,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QComboBox" name="host_type">
+      <widget class="UIControls::ComboBox" name="host_type">
        <item>
         <property name="text">
          <string>Public</string>
@@ -192,7 +192,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="host">
+      <widget class="UIControls::Button" name="host">
        <property name="text">
         <string>Host Room</string>
        </property>
@@ -202,6 +202,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

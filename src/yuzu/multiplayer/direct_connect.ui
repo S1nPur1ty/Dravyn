@@ -148,7 +148,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="connect">
+        <widget class="UIControls::Button" name="connect">
          <property name="text">
           <string>Connect</string>
          </property>
@@ -160,6 +160,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

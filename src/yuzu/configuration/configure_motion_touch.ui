@@ -35,7 +35,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="touch_calibration_config">
+         <widget class="UIControls::Button" name="touch_calibration_config">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -59,10 +59,10 @@
            </widget>
          </item>
         <item>
-         <widget class="QComboBox" name="touch_from_button_map"/>
+         <widget class="UIControls::ComboBox" name="touch_from_button_map"/>
         </item>
         <item>
-         <widget class="QPushButton" name="touch_from_button_config_btn">
+         <widget class="UIControls::Button" name="touch_from_button_config_btn">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -183,7 +183,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QPushButton" name="udp_test">
+             <widget class="UIControls::Button" name="udp_test">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -196,7 +196,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="udp_add">
+             <widget class="UIControls::Button" name="udp_add">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -229,7 +229,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QPushButton" name="udp_remove">
+             <widget class="UIControls::Button" name="udp_remove">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -285,6 +285,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UIControls::ComboBox</class>
+   <extends>QComboBox</extends>
+   <header>yuzu/util/popup.h</header>
+  </customwidget>
+  <customwidget>
+   <class>UIControls::Button</class>
+   <extends>QPushButton</extends>
+   <header>yuzu/util/design_system.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
