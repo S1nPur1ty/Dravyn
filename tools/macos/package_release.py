@@ -20,6 +20,23 @@ def package(bundle, binary, output, version, minimum_os):
         raise ValueError('Output app already exists; use a new output directory')
     subprocess.run(['ditto', str(bundle), str(app)], check=True)
     shutil.copy2(binary, app / 'Contents/MacOS/Dravyn')
+    # A fresh executable still references the build machine's libraries. Deploy it
+    # again even when the donor bundle already contains those dependencies.
+    subprocess.run(['macdeployqt', str(app), '-no-codesign'], check=True)
+    for file in app.rglob('*'):
+        if not file.is_file() or file.is_symlink():
+            continue
+        with file.open('rb') as stream:
+            magic = stream.read(4)
+        if magic not in (b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf',
+                         b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca'):
+            continue
+        libraries = subprocess.check_output(['otool', '-L', str(file)], text=True)
+        for line in libraries.splitlines()[1:]:
+            dependency = line.strip().split(' (', 1)[0]
+            if dependency.startswith('/') and not dependency.startswith(
+                    ('/System/Library/', '/usr/lib/')):
+                raise ValueError(f'Non-portable dependency in {file.name}: {dependency}')
     info_path = app / 'Contents/Info.plist'
     info = plistlib.loads(info_path.read_bytes())
     for key in ('LSEnvironment', 'MetalCaptureEnabled', 'CFBundleIconName'):
