@@ -1,44 +1,81 @@
-# Dravyn
+<p align="center">
+  <img src="dist/dravyn.png" alt="Dravyn dragon" width="160" />
+</p>
+<h1 align="center">Dravyn</h1>
+<p align="center"><strong>Your games. Your Mac.</strong></p>
+<p align="center">A fork of Eglantine with significant improvements for Apple Silicon.</p>
+<p align="center">
+  <a href="https://dravyn-six.vercel.app"><strong>Download for Mac</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/S1nPur1ty/Dravyn/releases">Releases</a>
+  &nbsp; · &nbsp;
+  <a href="docs/build/Dravyn-macOS.md">Build</a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/S1nPur1ty/Dravyn/issues">Report an issue</a>
+</p>
 
-<img src="dist/dravyn.png" alt="Dravyn dragon" width="128" />
+---
 
-**Dravyn is a macOS-focused fork of [Eglantine](https://github.com/diamond3500/Eglantine), with significant improvements for Apple Silicon Macs.** It combines native ARM64 execution improvements, Mac memory mapping and synchronization work, GPU command and resource handling improvements, and a redesigned game library and settings interface. Its Vulkan renderer runs through MoltenVK.
+### Made for the Mac
 
-User testing on an **Apple M4 Max** reports smooth Mario Kart World gameplay, with screenshots showing approximately **59–60 FPS at 1× scale** in some scenes. This is a reported result from that Mac, not a guarantee for every scene, game, or Apple Silicon model.
+A clean game library, familiar controller setup, and a refined dark interface. Underneath: ARM64 execution, memory mapping, synchronization, and GPU resource improvements, with Vulkan graphics through MoltenVK.
 
-**Preview software.** Game compatibility varies. Missing character geometry, reflections, and other rendering issues remain under investigation. A successful build is not a guarantee that every game works.
+**Smooth on M4 Max.** User testing reports around **59–60 FPS at 1×** in some Mario Kart World scenes. Results vary by game, scene, and Mac.
 
-- [Website and download](https://dravyn-six.vercel.app)
-- [Mac preview releases](https://github.com/S1nPur1ty/Dravyn/releases)
-- [Build and package for macOS](docs/build/Dravyn-macOS.md)
-- [Report an issue](https://github.com/S1nPur1ty/Dravyn/issues)
-- [Upstream project documentation](docs/UPSTREAM_README.md)
+| Mac preview | Requirements |
+| :--- | :--- |
+| Platform | Apple Silicon · macOS 26+ |
+| Tested Mac | M4 Max · 128 GB unified memory |
+| Minimum RAM | Not yet verified — see memory notes below |
 
-## Mac preview
+<details>
+<summary><strong>Getting started</strong></summary>
 
-The distributed ARM64 build requires an Apple Silicon Mac running macOS 26 or later, matching its bundled dependencies. Intel Macs are not supported by this download. The app is ad-hoc signed, not Apple-notarized.
+1. [Download the DMG](https://dravyn-six.vercel.app) and drag Dravyn to Applications.
+2. Add your game folder and required console files.
+3. Connect your controller and check its bindings in Settings.
 
-Open the DMG, drag Dravyn to Applications, and launch it. If macOS blocks the app, review the warning and use System Settings → Privacy & Security → Open Anyway only if you trust the download. Do not disable Gatekeeper globally.
+Games, firmware, and keys are not included. This preview is ad-hoc signed, not Apple-notarized. If macOS blocks it, review the warning and use **System Settings → Privacy & Security → Open Anyway** only if you trust the download. Do not disable Gatekeeper globally.
 
-Game files, firmware, and console keys are not included. Supply your own required files through the app. The public build has its own stable `dravyn` settings/cache profile; experimental diagnostics are disabled by default.
+The public build uses a stable `dravyn` settings/cache profile. Experimental diagnostics are disabled by default. This download does not support Intel Macs.
 
-## Hardware and memory
+</details>
 
-| Component | Current status |
-| --- | --- |
-| Platform | Apple Silicon, macOS 26 or later for the distributed preview |
-| Tested configuration | Apple M4 Max with 128 GB unified memory |
-| Minimum chip and RAM for smooth gameplay | Not yet established through testing on lower-spec Macs |
-| Graphics memory | Shared with system memory on Apple Silicon; leave room for macOS and other apps |
+<details>
+<summary><strong>Memory usage & hardware guidance</strong></summary>
 
-**Memory use varies with the game, scene, shader compilation, and cache state.** Saved macOS process samples from November 1, 2026 measured approximately **2.4–2.5 GB during startup/loading**, and **36.7 GB and 40.7 GB physical footprints in earlier development builds (2.0.1 and 2.0.2)**. These are historical observations, not a typical range or a measured peak for the current 2.0.54 release. The smaller loading figures must not be used as gameplay RAM requirements.
+Memory use depends on the game, scene, shader compilation, and caches. Apple Silicon shares memory between the CPU and GPU; macOS and other apps also need headroom.
 
-The tested Mac's 128 GB is not a minimum requirement. Conversely, we cannot currently promise that a 16 GB or 32 GB Mac will run demanding games smoothly. A reliable minimum needs current-release measurements across representative games and lower-memory Macs. The emulator's guest memory setting (for example, “4 GB DRAM”) is emulated console memory, not the app's total Mac memory use.
+| Historical observation | Process physical footprint |
+| :--- | ---: |
+| Startup/loading samples | 2.4–2.5 GB |
+| Development build 2.0.1 | 36.7 GB |
+| Development build 2.0.2 | 40.7 GB |
 
-To assess your Mac, open **Activity Monitor → Memory** while playing. Check Dravyn's memory use during shader preparation and an extended gameplay session, together with overall **Memory Pressure** and **Swap Used**. Record the app version, game, scale, Mac model, and installed memory when reporting results. Persistent memory pressure or growing swap indicates insufficient headroom for that workload; enough RAM alone does not guarantee the desired frame rate.
+These macOS samples were collected on **November 1, 2026**. They are not a typical range or a measured peak for the current release. Loading figures are not gameplay RAM requirements, and the tested Mac's 128 GB is not a minimum.
 
-## Credits and license
+A reliable minimum needs current-release measurements across representative games and lower-memory Macs. Smooth performance on 16 GB or 32 GB Macs has not been established. The emulator's “4 GB DRAM” setting describes guest console memory, not total Mac memory usage.
 
-Dravyn is derived from [Eglantine](https://github.com/diamond3500/Eglantine), Eden, Yuzu, and Sudachi. Original copyright and license notices are retained. See [LICENSE.txt](LICENSE.txt), [LICENSES](LICENSES), and individual file headers for applicable terms. It is an independent project, not affiliated with Nintendo.
+To assess your Mac, use **Activity Monitor → Memory** during shader preparation and an extended gameplay session. Check Dravyn's memory, overall **Memory Pressure**, and **Swap Used**. Report the version, game, scale, Mac model, and installed memory with your results. Persistent pressure or growing swap indicates insufficient headroom for that workload; enough RAM alone does not guarantee the desired frame rate.
 
-The macOS changes and interface were developed with AI assistance. Current build/package verification does not replace gameplay testing or human code review.
+</details>
+
+<details>
+<summary><strong>Preview status</strong></summary>
+
+Compatibility varies. Missing character geometry, reflections, and other rendering issues remain under investigation. Build and package verification does not replace gameplay testing or human review.
+
+The M4 Max performance above is user-reported, including screenshots near 60 FPS at 1× in some scenes. It is not a benchmark guarantee for every scene or Mac.
+
+</details>
+
+<details>
+<summary><strong>Credits & license</strong></summary>
+
+Dravyn is a fork of [Eglantine](https://github.com/diamond3500/Eglantine), built on the work of Eden, Yuzu, and Sudachi. Original copyright and license notices are retained.
+
+[License](LICENSE.txt) · [Third-party notices](LICENSES) · [Upstream documentation](docs/UPSTREAM_README.md)
+
+The macOS changes and interface were developed with AI assistance. Dravyn is an independent project, not affiliated with Nintendo.
+
+</details>
